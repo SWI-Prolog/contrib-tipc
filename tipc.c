@@ -40,12 +40,15 @@
 #include <sys/types.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #ifdef HAVE_LINUX_TIPC_H
 #include <linux/tipc.h>
 #else
 #error "Cannot find <tipc.h>"
 #endif
+
+static int tipc_version = 2;
 
 static atom_t ATOM_scope;
 static atom_t ATOM_no_scope;
@@ -81,6 +84,8 @@ static functor_t FUNCTOR_port_id;
 static functor_t FUNCTOR_name3;
 static functor_t FUNCTOR_name_seq3;
 static functor_t FUNCTOR_mcast3;
+
+#define V1_TIPC_SUB_SERVICE 0x02
 
 
 		 /*******************************
@@ -457,7 +462,7 @@ pl_tipc_get_peer_name(term_t Socket, term_t t)
 	return pl_tipc_basic_get_name(Socket, t, 1);
 }
 
-#define TIPC_MAXDATA 65300
+#define TIPC_MAXDATA TIPC_MAX_USER_MSG_SIZE
 
 static foreign_t
 pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
@@ -717,12 +722,27 @@ pl_tipc_subscribe(term_t Socket, term_t Address,
   if ( !PL_get_nchars(usr_handle, &handle_len, &handle, CVT_ALL|CVT_EXCEPTION) )
     return FALSE;
 
-  memcpy(&subscr.seq, &sockaddr.addr.nameseq, sizeof(subscr.seq));
-  subscr.timeout = time;
-  subscr.filter = filt;
-  memcpy(&subscr.usr_handle, handle,
-	 (handle_len < sizeof(subscr.usr_handle)) ? handle_len
-	 					  : sizeof(subscr.usr_handle));
+  if(tipc_version > 1)
+  { struct tipc_name_seq *p = &subscr.seq,
+                         *p1 = &sockaddr.addr.nameseq;
+
+    p->type = htonl(p1->type);
+    p->lower = htonl(p1->lower);
+    p->upper = htonl(p1->upper);
+
+    subscr.timeout = htonl(time);
+    subscr.filter = htonl((filt == V1_TIPC_SUB_SERVICE) 
+                          ? TIPC_SUB_SERVICE 
+                          : filt);
+  } else {
+    memcpy(&subscr.seq, &sockaddr.addr.nameseq, sizeof(subscr.seq));
+    subscr.timeout = time;
+    subscr.filter = filt;
+  }
+  memcpy(&subscr.usr_handle, handle, 
+         (handle_len < sizeof(subscr.usr_handle)) 
+          ? handle_len
+          : sizeof(subscr.usr_handle));
 
   fd = nbio_fd(socket);
 
@@ -732,10 +752,119 @@ pl_tipc_subscribe(term_t Socket, term_t Address,
     return TRUE;
 }
 
+static foreign_t
+pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
+{ struct sockaddr_tipc sockaddr;
+#ifdef __WINDOWS__
+  int alen = sizeof(sockaddr);
+#else
+  socklen_t alen = sizeof(sockaddr);
+#endif
+  int socket;
+  int flags = 0;
+  union {
+     char asCodes[sizeof(struct tipc_event)];
+     struct tipc_event asEvent;
+  } buf;
+
+  ssize_t n;
+  struct tipc_event *event = &buf.asEvent;
+
+  if ( !tipc_get_socket(Socket, &socket))
+    return FALSE;
+
+  if ( (n=nbio_recvfrom(socket, buf.asCodes, sizeof(buf.asCodes), flags,
+			(struct sockaddr*)&sockaddr, &alen)) == -1 )
+    return nbio_error(errno, TCP_ERRNO);
+
+  if(n != sizeof(*event))
+     return FALSE;
+
+  if(tipc_version > 1)
+  { struct tipc_name_seq *p = &event->s.seq;
+
+    event->event = ntohl(event->event);
+    event->found_lower = ntohl(event->found_lower);
+    event->found_upper = ntohl(event->found_upper);
+
+    event->port.ref = ntohl(event->port.ref);
+    event->port.node = ntohl(event->port.node);
+
+    p->type = ntohl(p->type);
+    p->lower = ntohl(p->lower);
+    p->upper = ntohl(p->upper);
+
+    event->s.timeout = ntohl(event->s.timeout);
+    event->s.filter = ntohl(event->s.filter);
+
+    if(event->s.filter == TIPC_SUB_SERVICE) 
+        event->s.filter = V1_TIPC_SUB_SERVICE;
+  }
+
+  switch(event->event) 
+  {
+      case TIPC_PUBLISHED:
+      case TIPC_WITHDRAWN:
+        { term_t Found = PL_new_term_ref(),
+                 Port_id = PL_new_term_ref(),
+                 Subscr = PL_new_term_ref();
+          const char *event_chars = (event->event == TIPC_PUBLISHED)
+                                    ? "published"
+                                    : "withdrawn";
+
+          if(!PL_unify_term(Subscr, PL_FUNCTOR_CHARS, "name_seq", 3,
+			   IntArg(event->s.seq.type),
+			   IntArg(event->s.seq.lower),
+			   IntArg(event->s.seq.upper)))
+             return FALSE;
+
+          if(!PL_unify_term(Found, PL_FUNCTOR_CHARS, "name_seq", 3,
+			   IntArg(event->s.seq.type),
+			   IntArg(event->found_lower),
+			   IntArg(event->found_upper)))
+             return FALSE;
+
+          if(!PL_unify_term(Port_id, PL_FUNCTOR_CHARS, "port_id", 2,
+			   IntArg(event->port.ref),
+			   IntArg(event->port.node)))
+             return FALSE;
+
+          if(!PL_unify_term(Data, PL_FUNCTOR_CHARS, "tipc_event", 4,
+               AtomArg(event_chars),
+			   PL_TERM, Subscr,
+			   PL_TERM, Found,
+			   PL_TERM, Port_id))
+             return FALSE;
+          
+          return TRUE;
+        }
+
+      case TIPC_SUBSCR_TIMEOUT:
+        {
+          return PL_unify_term(Data, PL_FUNCTOR_CHARS, "subscr_timeout", 0);
+        }
+      default:
+          return FALSE;
+   };
+  return FALSE;
+}
+
 
 install_t
 install_tipc()
-{ nbio_init("tipc");
+{ FILE *fp = fopen("/sys/module/tipc/version", "r");
+
+  if(fp)
+    { char buf[32];
+      size_t n = fread(buf, sizeof(char), sizeof(buf), fp);
+
+      if(n > 0)
+         tipc_version = buf[0] - '0';
+
+      fclose(fp);
+    } 
+
+  nbio_init("tipc");
 
   ATOM_scope	       = PL_new_atom("scope");
   ATOM_no_scope	       = PL_new_atom("no_scope");
@@ -785,4 +914,5 @@ install_tipc()
   PL_register_foreign("tipc_receive",	      4, pl_tipc_receive,     0);
   PL_register_foreign("tipc_send",	          4, pl_tipc_send,	      0);
   PL_register_foreign("tipc_subscribe",	      5, pl_tipc_subscribe,   0);
+  PL_register_foreign("tipc_receive_subscr_event", 2, pl_tipc_receive_subscr_event,     0);
 }

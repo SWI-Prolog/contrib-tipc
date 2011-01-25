@@ -43,7 +43,7 @@
 %	    tipc_subscribe/5, % +Socket, +Address, +Timeout, +Filter,
 %	    +Usr_handle
 
-%	    tipc_event/3,		% +Data, -Event, -Residue
+%	    tipc_receive_subscr_event/2, % +Socket, -Event
 	    tipc_canonical_address/2,	% -Address, +port_id/2
             tipc_service_probe/1,	% ?Address
 	    tipc_service_probe/2,	% ?Address, ?PortId
@@ -140,7 +140,7 @@ pattern. For an overview, please see: tipc_overview.txt.
 %	 transparently to the subscriber  with   every  notification. An
 %	 application that uses this service must   be  prepared to parse
 %	 event notifications received from  the   TIPC  topology server.
-%	 tipc_event/3, is provided for this purpose.
+%	 tipc_receive_subscr_event/4, is provided for this purpose.
 %
 %	 It is possible to have  multiple   subscriptions  active on the
 %	 same socket any one time, making periodic subscription renewal
@@ -361,46 +361,39 @@ pattern. For an overview, please see: tipc_overview.txt.
 % %	 tipc_event(+Data, -Event, -Residue) is det.
 %
 %	 Parses event notifications received from   the  topology server
-%	 into Prolog structures. While using the "publish and subscribe"
-%	 regime, the topology  server  will   notify  the  subscriber of
-%	 certain events related to the publisher.  These are received on
-%	 the socket as  user  data.   tipc_event/3,  parses  a  received
-%	 message into a more comfortable   Prolog structure, Event. Data
-%	 is a list of codes representing a  message received on a socket
-%	 where a tipc_subscribe/5, has been  issued previously. Event is
-%	 the  parsed  event  structure,  if  an  event  was  recognized,
-%	 otherwise Residue is unified with Data and the atom, =none=, is
-%	 returned in the Event argument. Residue  is the remaining data,
-%	 after the notification has been  stripped out. tipc_event/3, is
-%	 implemented using Prolog DCG.
+%	into Prolog structures. This  predicate   has  been  permanently
+%	removed.
 %
-%	 Event is a structure of the form:
+
+% %	 tipc_receive_subscr_event(+Socket, -Event) is semidet.
 %
-%        $ tipc_event(-EventType, -NameSeq, -PortId, -Subscription) :
-%	   * EventType, is one of: =published=, =withdrawn=, or
-%	   =subscr_timeout=.
+%	Receives and parses event notifications received from the
+%	TIPC Topology Server.
 %
-%          * NameSeq is the newly published/withdrawn
-%	   name-sequence address of the publisher.
+%	_|Please note that this predicate is considered private. Its use
+%	in user programs is strongly discouraged. See the
+%	tipc-service predicates for alternatives.|_
 %
-%          * PortId is the port-id
-%	   address of an instance, though not necessarily the only
-%	   instance, of the service. A =|port_id(0,0)|=, appears in
-%	   "withdraw" events. It means that the address is no longer
-%	   valid. A client may use either the NameSeq address, or the
-%	   PortId address to connect to the service. Using the NameSeq
-%	   address causes the client to be connected to an unspecified
-%	   instance of the service. Using the PortId causes the client
-%	   to be connected to a specific instance of the service.
+%	@param Socket is a TIPC socket that has been previously
+%	connected to the topology server using tipc_connect/2, and for
+%	which a subscription has been sent using tipc_subscribe/5,
+%	above.
 %
-%        Subscription, is a structure of the form:
+%	@param Event is the structure: =|tipc_event(-Action, -Subscr,
+%	-Found, -Port_id)|=. On subscription timeout, the
+%	atom, =subscr_timeout= is returned. Subscr is the name-sequence
+%	address of the original subscription.
 %
-%	 $ subscr(-OriginalNameSeq, -Timeout, -Filter,-UserHandle) :
-%	 This information is identical to that specified in the
-%	 original subscription.
+%       Action is one of:
 %
-%	 _|Please note that this predicate should be considered
-%	 private. Its use in user programs is strongly discouraged.|_
+%	  $ published:
+%         The socket specified by Port_id has been bound to
+%	the name_seq/3 address specified in Found.
+%
+%	  $ withdrawn:
+%         The socket specified by Port_id has been
+%	  unbound from the name_seq/3 address specified in Found. See
+%	the no_scope/1 option of tipc_bind/3.
 %
 
 :- multifile
@@ -408,60 +401,6 @@ pattern. For an overview, please see: tipc_overview.txt.
 
 prolog:message(error(socket_error(Message), _)) -->
 	[ 'Socket error: ~w'-[Message] ].
-
-tipc_event(Data, Event, Residue) :-
-	phrase(struct_tipc_event(Event), Data, Residue), !.
-
-tipc_event(Data, none, Data).
-
-/*
-*   DCG parser for TIPC topology server events
-*/
-
-integerAsU32(In, Out) :-
-        nonvar(In), !,
-	(   ( In < 0) -> Out is In + 0x100000000; Out is In).
-
-integerAsU32(In, Out) :-
-        nonvar(Out), !,
-	(   ( Out > 0x7fffffff) -> In is Out - 0x100000000; In is Out).
-
-u32(X) -->  [X,0,0,0], { between(0,255, X) }, !.
-u32(-1) --> [255,255,255,255], !.
-u32(Int) -->
-	[X0, X1, X2, X3],
-	{ X is ((((X3 * 256) + X2) * 256 + X1) * 256) + X0, integerAsU32(Int, X) }.
-
-chars(0, []) --> [], !.
-chars(N, [A | B]) --> [A], {succ(N1, N)}, chars(N1, B).
-
-struct_tipc_name_seq(name_seq(Type, Lower, Upper)) -->
-	u32(Type),
-	u32(Lower),
-	u32(Upper).
-
-struct_tipc_portid(port_id(Ref, Node)) -->
-	u32(Ref),
-	u32(Node).
-
-struct_tipc_subscr(subscr(Seq, Timeout, Filter, UserHandle)) -->
-	struct_tipc_name_seq(Seq),
-	u32(Timeout),
-	u32(Filter),
-	chars(8, UserHandle).
-
-tipc_event_type(published) --> u32(1), !.
-tipc_event_type(withdrawn) --> u32(2), !.
-tipc_event_type(subscr_timeout) --> u32(3), !.
-
-struct_tipc_event(tipc_event(Event, name_seq(Type, Found_lower, Found_upper), PortId, Subscr)) -->
-	tipc_event_type(Event),
-	u32(Found_lower),
-	u32(Found_upper),
-	struct_tipc_portid(PortId),
-	struct_tipc_subscr(Subscr),
-	{ Subscr = subscr(name_seq(Type, _, _), _, _, _) }.
-
 
 %%	tipc_canonical_address(-CanonicalAddress, +PortId) is det.
 %
@@ -471,6 +410,14 @@ struct_tipc_event(tipc_event(Event, name_seq(Type, Found_lower, Found_upper), Po
 %
 %	It is provided for debugging an printing purposes only. The
 %	canonical address is not used for any other purpose.
+
+integerAsU32(In, Out) :-
+	nonvar(In),
+	(   In < 0 -> Out is In + 0x100000000; Out is In).
+
+integerAsU32(In, Out) :-
+	nonvar(Out),
+	(   Out > 0x7fffffff -> In is Out - 0x100000000; In is Out).
 
 tipc_canonical_address(tipc_address(Z,C,N, Ref1), port_id(Ref, Node)) :-
        integerAsU32(Ref, Ref1),
@@ -504,10 +451,6 @@ user:portray(port_id(Ref, Node)) :-
 %	also permissible.
 %
 
-se_dispatch(NameSeq, Service, tipc_event(published, Service, _, subscr(NameSeq, _, _, _))) :- !.
-
-se_dispatch(_NameSeq, _Service, tipc_event(subscr_timeout, _, _, _)).
-
 tipc_address(name(T, I, 0), name_seq(T, I, I)).
 tipc_address(name_seq(T, L, U), name_seq(T, L, U)).
 tipc_address(mcast(T, L, U), name_seq(T, L, U)).
@@ -523,12 +466,13 @@ tipc_service_exists(Address, Timeout) :-
 	try_finally(tipc_socket(S, seqpacket),
 		    tipc_close_socket(S)),
 	tipc_connect(S, name(1,1,0)),   % connect to the topology server
-	tipc_subscribe(S, NameSeq, ITime, 2, "prolog"),
+	tipc_subscribe(S, NameSeq, ITime, 2, "swipl"),
 	repeat,
-	    tipc_receive(S, Data, _From, [as(codes)]),
-	    tipc_event(Data, Event, []),
-	    se_dispatch(NameSeq, Service, Event),
-	!, ground(Service).
+	    tipc_receive_subscr_event(S, Data),
+            (	Data == subscr_timeout
+	    -> (!, fail)
+	    ;  Data = tipc_event(published, NameSeq, _FoundSeq, _Port_id)),
+	!.
 
 %%	tipc_service_probe(?Address) is nondet.
 %%	tipc_service_probe(?Address, ?PortId) is nondet.
@@ -552,7 +496,7 @@ tipc_service_probe(Address) :-
 	NameSeq = name_seq(Type, Lower, Upper),
 	try_finally(tipc_socket(S, seqpacket), tipc_close_socket(S)),
 	tipc_connect(S, name(1,1,0)),   % connect to the topology server
-	tipc_subscribe(S, name_seq(Type, 0, -1), 0, 2, "prolog"),  % look for everything
+	tipc_subscribe(S, name_seq(Type, 0, 4294967295), 0, 2, "swipl"),  % look for everything
 	sp_collect(S, Members),
 	!, member([NameSeq, _], Members).
 
@@ -562,7 +506,7 @@ tipc_service_probe(Address, PortId) :-
 	NameSeq = name_seq(Type, Lower, Upper),
 	try_finally(tipc_socket(S, seqpacket), tipc_close_socket(S)),
 	tipc_connect(S, name(1,1,0)),   % connect to the topology server
-	tipc_subscribe(S, name_seq(Type, 0, -1), 0, 1, "prolog"),  % look for everything
+	tipc_subscribe(S, name_seq(Type, 0, 4294967295), 0, 1, "swipl"),  % look for everything
 	sp_collect(S, Members),
 	!, member([NameSeq, PortId], Members).
 
@@ -570,11 +514,10 @@ sp_collect(S, Members) :-
 	findall([NameSeq ,PortId],
 	    (
 	    repeat,
-	    tipc_receive(S, Data, _From, [as(codes)]),
-	    tipc_event(Data, tipc_event(Event, NameSeq, PortId, _), []),
-	(   (Event == published) ->
-	       true ;
-	       (Event == subscr_timeout -> (!, fail)); fail)
+	    tipc_receive_subscr_event(S, Data),
+	    (	Data == subscr_timeout
+	    -> (!, fail)
+	    ; Data = tipc_event(published, _Service, NameSeq, PortId))
 	    ), Members).
 
 %%	tipc_service_port_monitor(+Addresses, :Goal) is det.
@@ -618,9 +561,9 @@ sp_collect(S, Members) :-
 %	operating in the background.
 %
 
-spm_dispatch(_Goal, tipc_event(subscr_timeout, _, _, _)) :- !.
+spm_dispatch(_Goal, subscr_timeout) :- !.
 
-spm_dispatch(Goal, tipc_event(Action, NameSeq, PortId, _)) :-
+spm_dispatch(Goal, tipc_event(Action, _Subscr, NameSeq, PortId)) :-
 	Event =.. [Action, NameSeq, PortId],
 	once(call(Goal, Event)), fail.
 
@@ -644,11 +587,10 @@ tipc_service_port_monitor(Addresses, Goal, Timeout) :-
 	try_finally(tipc_socket(S, seqpacket), tipc_close_socket(S)),
 	tipc_connect(S, name(1,1,0)),   % connect to the topology server
 	forall(member(NameSeq, NameSeqs),
-	       tipc_subscribe(S, NameSeq, ITime, 1, "prolog")),
-	    repeat,
-	        tipc_receive(S, Data, _From, [as(codes)]),
-	        tipc_event(Data, Event, []),
-	        spm_dispatch(Goal, Event),
+	       tipc_subscribe(S, NameSeq, ITime, 1, "swipl")),
+	repeat,
+	tipc_receive_subscr_event(S, Data),
+	spm_dispatch(Goal, Data),
         !.
 
 %%     tipc_initialize is semidet.
