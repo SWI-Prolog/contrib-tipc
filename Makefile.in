@@ -42,6 +42,7 @@ LDFLAGS=@LDSOFLAGS@
 INSTALL=@INSTALL@
 INSTALL_PROGRAM=@INSTALL_PROGRAM@
 INSTALL_DATA=@INSTALL_DATA@
+INSTALL_PLARCH=@INSTALL_PLARCH@
 
 LIBPL=		@PLTARGETS@
 LIBTXT=		@LIBTXT@
@@ -68,9 +69,9 @@ uninstall::
 else
 
 install:	$(TARGETS) $(LIBPL)
-		mkdir -p $(DESTDIR)$(PLBASE)/lib/$(PLARCH)
+		mkdir -p $(DESTDIR)$(PLBASE)/lib/$(INSTALL_PLARCH)
 		for f in $(TARGETS); do \
-		  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(PLBASE)/lib/$(PLARCH); \
+		  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(PLBASE)/lib/$(INSTALL_PLARCH); \
 		done
 		mkdir -p $(DESTDIR)$(PLBASE)/library/tipc
 		for f in $(LIBPL) $(LIBTXT); do \
@@ -92,7 +93,7 @@ pdf-install::
 		$(INSTALL) -m 644 $(DOC).pdf $(DESTDIR)$(PKGDOC)
 
 uninstall::
-		(cd $(PLBASE)/lib/$(PLARCH) && rm -f $(TARGETS))
+		(cd $(PLBASE)/lib/$(INSTALL_PLARCH) && rm -f $(TARGETS))
 		(cd $(PLBASE)/library/tipc && rm -f $(LIBPL) $(LIBTXT))
 		$(PL) -f none -g make -t halt
 
