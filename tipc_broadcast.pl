@@ -311,7 +311,7 @@ ld_dispatch(_S, Term, _From) :-
 tipc_listener_daemon(Parent) :-
 	tipc_socket(S, rdm) ~> tipc_close_socket(S),
 
-	tipc_setopt(S, importance(medium)),
+%	tipc_setopt(S, importance(medium)),
 	tipc_setopt(S, dest_droppable(true)),  % discard if not deliverable
 
 	forall(tipc_broadcast_service(Scope, Address),
@@ -373,7 +373,7 @@ broadcast_listener(tipc_zone(X, Timeout)) :-
 
 tipc_basic_broadcast(S, Term, Address) :-
 	tipc_socket(S, rdm) ~> tipc_close_socket(S),
-	tipc_setopt(S, importance(medium)),
+%	tipc_setopt(S, importance(medium)),
 	term_to_atom(Term, Atom),
 	safely(tipc_send(S, Atom, Address, [])).
 
@@ -410,6 +410,9 @@ tipc_br_send_timeout(Port) :-
 	tipc_socket(S, rdm) ~> tipc_close_socket(S),
 
 	tipc_setopt(S, importance(critical)),
+	tipc_setopt(S, src_droppable(false)),
+	tipc_setopt(S, dest_droppable(false)),
+
 	tipc_send(S, '$tipc_br_timeout', Port, []),
 	!.
 
@@ -420,7 +423,7 @@ tipc_br_collect_replies(S, Timeout, Term:From) :-
 	repeat,
         tipc_receive(S, Atom, From1, [as(atom)]),
         (   (Atom \== '$tipc_br_timeout')
-  	    -> (From1 = From, safely(term_to_atom(Term, Atom)))
+	    -> (From1 = From, safely(term_to_atom(Term, Atom)))
 	    ;  (!, fail)).
 
 %%	tipc_host_to_address(?Service, ?Address) is nondet.
