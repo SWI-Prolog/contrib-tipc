@@ -39,7 +39,7 @@
 	    tipc_get_peer_name/2,	% +Socket, -Address
 	    tipc_connect/2,		% +Socket, +Address
 	    tipc_receive/4,		% +Socket, -Data, -Sender, +Options
-	    tipc_send/4,  		% +Socket, +Data, +Receiver, +Options
+	    tipc_send/4,		% +Socket, +Data, +Receiver, +Options
 %	    tipc_subscribe/5, % +Socket, +Address, +Timeout, +Filter,
 %	    +Usr_handle
 
@@ -569,8 +569,8 @@ spm_dispatch(Goal, tipc_event(Action, _Subscr, NameSeq, PortId)) :-
 
 %
 :- meta_predicate
-	tipc_service_port_monitor(+, :),
-	tipc_service_port_monitor(+, :, +).
+	tipc_service_port_monitor(+, 1),
+	tipc_service_port_monitor(+, 1, +).
 
 tipc_service_port_monitor(Address, Goal) :-
 	tipc_service_port_monitor(Address, Goal, 0.0), !.
