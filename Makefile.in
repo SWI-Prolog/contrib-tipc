@@ -9,41 +9,16 @@
 # Author: Jeff Rose, Jan Wielemaker (wielemak@science.uva.nl)
 ################################################################
 
-.SUFFIXES: .tex .dvi .doc .pl
+PACKAGE=tipc
+DOC=tipc
+include ../Makefile.defs
 
-PL=@PL@
-PLBASE=@PLBASE@
-PLARCH=@PLARCH@
-PLINCL=@PLINCL@
-PKGDOC=$(PLBASE)/doc/packages
-PCEHOME=../xpce
-SOLIB=@SOLIB@
+CFLAGS+= -I. -I../clib
 
-CC=@CC@
-COFLAGS=@COFLAGS@
-CWFLAGS=@CWFLAGS@
-CMFLAGS=@CMFLAGS@
-CIFLAGS=-I. -I../clib
-CFLAGS=$(COFLAGS) $(CWFLAGS) $(CMFLAGS) $(CIFLAGS) @DEFS@
 LIBS=@LIBS@
 NETLIBS=@NETLIBS@
 
-PUBLICPL=swipl
-DOCTOTEX=$(PCEHOME)/bin/doc2tex
-PLTOTEX=$(PUBLICPL) -q -s pltotex.pl -g pltotex --
-DOC=tipc
-TEX=$(DOC).tex tipcoverview.tex tipcpl.tex tipcbroadcast.tex tipcpaxos.tex tipclinda.tex
-DVI=$(DOC).dvi
-PDF=$(DOC).pdf
-RUNTEX=../../man/runtex
-
-LD=@LD@
-LDFLAGS=@LDSOFLAGS@
-
-INSTALL=@INSTALL@
-INSTALL_PROGRAM=@INSTALL_PROGRAM@
-INSTALL_DATA=@INSTALL_DATA@
-INSTALL_PLARCH=@INSTALL_PLARCH@
+SUBTEX=tipcoverview.tex tipcpl.tex tipcbroadcast.tex tipcpaxos.tex tipclinda.tex
 
 LIBPL=		@PLTARGETS@
 LIBTXT=		@LIBTXT@
@@ -54,7 +29,7 @@ TIPCOBJ=	../clib/error.o tipc.o ../clib/nonblockio.o
 all:		$(TARGETS)
 
 tipc.@SO@:	$(TIPCOBJ)
-		$(LD) $(LDFLAGS) -o $@ $(TIPCOBJ) $(NETLIBS)
+		$(LD) $(LDSOFLAGS) -o $@ $(TIPCOBJ) $(NETLIBS)
 
 tipc.o:		tipc.c ../clib/sockcommon.c
 
@@ -70,15 +45,15 @@ uninstall::
 else
 
 install:	$(TARGETS) $(LIBPL)
-		mkdir -p $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH)
+		mkdir -p $(DESTDIR)$(SOLIBDIR)
 		for f in $(TARGETS); do \
-		  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH); \
+		  $(INSTALL_PROGRAM) $$f $(DESTDIR)$(SOLIBDIR); \
 		done
-		mkdir -p $(DESTDIR)$(PLBASE)/library/tipc
+		mkdir -p $(DESTDIR)$(PLLIBDIR)/tipc
 		for f in $(LIBPL) $(LIBTXT); do \
-		  $(INSTALL_DATA) $$f $(DESTDIR)$(PLBASE)/library/tipc; \
+		  $(INSTALL_DATA) $$f $(DESTDIR)$(PLLIBDIR)/tipc; \
 		done
-		$(PL) -f none -g make -t halt
+		$(MKINDEX)
 
 ln-install::
 		@$(MAKE) INSTALL='../ln-install' \
@@ -89,17 +64,17 @@ ln-install::
 rpm-install:	install
 
 html-install::
-		mkdir -p $(DESTDIR)$(PKGDOC)
-		$(INSTALL) -m 644 $(DOC).html $(DESTDIR)$(PKGDOC)
+		mkdir -p $(DESTDIR)$(PKGDOCDIR)
+		$(INSTALL) -m 644 $(DOC).html $(DESTDIR)$(PKGDOCDIR)
 
 pdf-install::
-		mkdir -p $(DESTDIR)$(PKGDOC)
-		$(INSTALL) -m 644 $(DOC).pdf $(DESTDIR)$(PKGDOC)
+		mkdir -p $(DESTDIR)$(PKGDOCDIR)
+		$(INSTALL) -m 644 $(DOC).pdf $(DESTDIR)$(PKGDOCDIR)
 
 uninstall::
-		(cd $(PLBASE)/$(SOLIB)/$(INSTALL_PLARCH) && rm -f $(TARGETS))
-		(cd $(PLBASE)/library/tipc && rm -f $(LIBPL) $(LIBTXT))
-		$(PL) -f none -g make -t halt
+		(cd $(SOLIBDIR) && rm -f $(TARGETS))
+		(cd $(PLLIBDIR)/tipc && rm -f $(LIBPL) $(LIBTXT))
+		$(MKINDEX)
 
 endif
 
@@ -113,21 +88,6 @@ check::
 # Documentation
 ################################################################
 
-pdf:		$(PDF)
-
-$(DVI):		$(TEX)
-		$(RUNTEX) $(DOC)
-
-$(PDF):		$(TEX)
-		$(RUNTEX) --pdf $(DOC)
-
-html:		$(TEX)
-		latex2html $(DOC)
-		mv html/index.html $(DOC).html
-		rm -r html
-
-$(TEX):		$(DOCTOTEX)
-
 tipcoverview.tex:	tipc_overview.txt
 		$(PLTOTEX) --section $<
 tipcpl.tex:	tipc.pl
@@ -138,11 +98,6 @@ tipcpaxos.tex:	tipc_paxos.pl
 		$(PLTOTEX) --subsection $<
 tipclinda.tex:	tipc_linda.pl
 		$(PLTOTEX) --subsection $<
-
-.doc.tex:
-		$(DOCTOTEX) $*.doc > $*.tex
-.pl.tex:
-		$(PLTOTEX) $*.pl
 
 ################################################################
 # Clean
