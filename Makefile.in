@@ -88,6 +88,10 @@ check::
 # Documentation
 ################################################################
 
+TEXEXTRA=	tipcoverview.tex tipcpl.tex tipcbroadcast.tex \
+		tipcpaxos.tex tipclinda.tex
+$(TEX):		$(TEXEXTRA)
+
 tipcoverview.tex:	tipc_overview.txt
 		$(PLTOTEX) --section $<
 tipcpl.tex:	tipc.pl
