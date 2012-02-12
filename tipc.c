@@ -438,6 +438,8 @@ pl_tipc_basic_get_name(term_t Socket, term_t t, int peer)
   socklen_t alen = sizeof(addr);
 #endif
 
+  memset(&addr, 0, sizeof(addr));
+
   if ( !tipc_get_socket(Socket, &socket))
     return FALSE;
 
@@ -477,6 +479,8 @@ pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
   char buf[TIPC_MAXDATA];
   ssize_t n;
   int as = PL_STRING;
+
+  memset(&sockaddr, 0, sizeof(sockaddr));
 
   if ( !PL_get_nil(options) )
   { term_t tail = PL_copy_term_ref(options);
@@ -546,6 +550,8 @@ pl_tipc_send(term_t Socket, term_t Data, term_t To, term_t Options)
   size_t dlen;
   ssize_t n;
 
+  memset(&sockaddr, 0, sizeof(sockaddr));
+
   if ( !PL_get_nchars(Data, &dlen, &data, CVT_ALL|CVT_EXCEPTION) )
     return FALSE;
 
@@ -611,6 +617,8 @@ pl_tipc_accept(term_t Master, term_t Slave, term_t Peer)
   struct sockaddr_tipc addr;
   socklen_t addrlen = sizeof(addr);
 
+  memset(&addr, 0, sizeof(addr));
+
   if ( !tipc_get_socket(Master, &master) )
     return FALSE;
 
@@ -629,6 +637,8 @@ static foreign_t
 pl_tipc_connect(term_t Socket, term_t Address)
 { int sock;
   struct sockaddr_tipc sockaddr;
+
+  memset(&sockaddr, 0, sizeof(sockaddr));
 
   if ( !tipc_get_socket(Socket, &sock) ||
        !nbio_get_tipc_sockaddr(Address, &sockaddr) )
