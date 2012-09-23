@@ -63,6 +63,7 @@ static atom_t ATOM_rdm;
 static atom_t ATOM_seqpacket;
 static atom_t ATOM_stream;
 
+static atom_t ATOM_dispatch;    /* "dispatch" */
 static atom_t ATOM_nodelay;		/* "nodelay" */
 static atom_t ATOM_nonblock;		/* "nonblock" */
 static atom_t ATOM_as;			/* "as" */
@@ -398,6 +399,17 @@ pl_tipc_setopt(term_t Socket, term_t opt)
 
     if ( a == ATOM_nonblock && arity == 0 )
       return((nbio_setopt(socket, TCP_NONBLOCK) == 0) ? TRUE : FALSE );
+
+    if ( a == ATOM_dispatch && arity == 1 )
+    { int val;
+      term_t a1 = PL_new_term_ref();
+
+      if ( PL_get_arg(1, opt, a1) && PL_get_bool(a1, &val) )
+      { if ( nbio_setopt(socket, TCP_DISPATCH, val) == 0 )
+	  return TRUE;
+	return FALSE;
+      }
+    } 
   }
 
   return pl_error(NULL, 0, NULL, ERR_DOMAIN, opt, "socket_option");
@@ -900,6 +912,7 @@ install_tipc()
   ATOM_seqpacket       = PL_new_atom("seqpacket");
   ATOM_stream	       = PL_new_atom("stream");
 
+  ATOM_dispatch        = PL_new_atom("dispatch");
   ATOM_nodelay	       = PL_new_atom("nodelay");
   ATOM_nonblock	       = PL_new_atom("nonblock");
   ATOM_as	       = PL_new_atom("as");

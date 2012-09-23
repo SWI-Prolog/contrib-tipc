@@ -410,9 +410,6 @@ tipc_br_send_timeout(Port) :-
 	tipc_socket(S, rdm) ~> tipc_close_socket(S),
 
 	tipc_setopt(S, importance(critical)),
-	tipc_setopt(S, src_droppable(false)),
-	tipc_setopt(S, dest_droppable(false)),
-
 	tipc_send(S, '$tipc_br_timeout', Port, []),
 	!.
 
@@ -420,6 +417,7 @@ tipc_br_collect_replies(S, Timeout, Term:From) :-
 	tipc_get_name(S, Port),
 	alarm(Timeout, tipc_br_send_timeout(Port), Id)
 	     ~> remove_alarm(Id),
+	tipc_setopt(S, dispatch(false)),
 	repeat,
         tipc_receive(S, Atom, From1, [as(atom)]),
         (   (Atom \== '$tipc_br_timeout')
