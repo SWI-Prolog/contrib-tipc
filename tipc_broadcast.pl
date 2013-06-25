@@ -154,7 +154,7 @@ Process C:
 
 ==
 
----++ Caveats:
+## Caveats {#tipc-caveats}
 
 While the implementation is mostly transparent, there are some important
 and subtle differences that must be taken into consideration:

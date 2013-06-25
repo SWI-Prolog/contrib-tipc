@@ -1,4 +1,4 @@
----+ Transparent Inter-Process Communications (TIPC)
+# Transparent Inter-Process Communications (TIPC) {#tipc-main}
 
 These pages are not intended as a   comprehensive tutorial in the use of
 TIPC      services.      The       TIPC        Programmer's       Guide,
@@ -10,7 +10,7 @@ one. A TIPC server loadable module, that  may   be  used  to make a host
 available as a TIPC enabled node, has been   a  part of the Linux kernel
 since 2.6.16. Please see: <http://tipc.sf.net>
 
----++ Overview
+## Overview {#tipc-overview}
 
 In a TIPC network, a Node is   comprised  of a collection of lightweight
 threads of execution operating  in  the   same  process,  or heavyweight
@@ -20,14 +20,14 @@ of a local Ethernet or other networking  medium. Clusters may be further
 aggregated into Zones, and Zones into Networks. The address space of two
 TIPC networks is completely disjoint. Zones   on  different networks may
 coexist on the same LAN but they   may not communicate directly with one
-another. 
+another.
 
 TIPC  provides  connectionless,  connection-oriented,    reliable,   and
 unreliable forwarding strategies for both   stream  and message oriented
 applications. But not all strategies can   be used in every application.
 For example, there is no such  thing   as  a  multicast byte stream. The
 strategy is selected by the user for  the application when the socket is
-instantiated. 
+instantiated.
 
 TIPC is not TCP/IP based. Consequently, it  cannot signal beyond a local
 network span without some kind of  tunneling mechanism. TIPC is designed
@@ -38,7 +38,7 @@ unaware of the topology of the network on  which it is running. It could
 be a few threads  operating  in   the  same  process,  several processes
 operating on the same machine, or it could be dozens or even hundreds of
 machines operating on the same LAN, all operating as a unit. TIPC
-manages all of this complexity so that the programmer doesn't have to. 
+manages all of this complexity so that the programmer doesn't have to.
 
 Unlike TCP/IP, TIPC  does  not  assign   network  addresses  to  network
 interfaces; it assigns addresses (e.g. port-ids)   to  sockets when they
@@ -53,7 +53,7 @@ of client requests among the membership of   the  server group. A server
 instance responds to two addresses: its   public well-known address that
 it is bound to, and that a client   may use to establish a communication
 with a service, and its private address that the server instance may use
-to directly interact with a client instance. 
+to directly interact with a client instance.
 
 TIPC also enables multicast and  "publish   and  subscribe" regimes that
 applications may use to facilitate   asynchronous  exchange of datagrams
@@ -68,7 +68,7 @@ topology server's name table. This has  the   side  effect  of causing a
 "published"  event  to  be  emitted    to  all  interested  subscribers.
 Conversely, when the server's socket  is  closed   or  when  one  of its
 addresses is released using the  "no-scope"   option  of  tipc_bind/3, a
-"withdrawn" event is emitted. See tipc_service_port_monitor/2. 
+"withdrawn" event is emitted. See tipc_service_port_monitor/2.
 
 A client application may connect to  the   topology  server  in order to
 interrogate the name table to determine  whether   or  not  a service is
@@ -83,7 +83,7 @@ worker's "withdrawn" event, and takes some action to instantiate a
 replacement. The predicate, tipc_service_port_monitor/2, is provided
 specifically for this purpose. Using the service is optional. It has
 applications in distributed, high-availability, fault-tolerant,
-and non-stop systems. 
+and non-stop systems.
 
 Adding capacity to a cluster becomes  an administrative function whereby
 new server hardware is  added  to  a   TIPC  network,  then  the desired
@@ -98,14 +98,14 @@ interfaces. Provided that each interface is invisible to the other, TIPC
 will manage them as a redundant   group,  thus enabling high-reliability
 network features such as automatic link fail-over and hot-swap.
 
----++ TIPC Address Structures
+## TIPC Address Structures {#tipc-address-structures}
 
     * name(+Type, +Instance, +Domain)
     A TIPC name address is used by   servers  to advertise themselves as
     services in unicast applications, and is  used by clients to connect
     to unicast services. Type, Instance, and Domain are positive
     integers that are unique to a service.
-    
+
     * name_seq(+Type, +Lower, +Upper)
     A TIPC name-sequence address is used by servers to advertise
     themselves as services in multicast and "publish and subscribe"
@@ -115,8 +115,8 @@ network features such as automatic link fail-over and hot-swap.
     Type, and where its Lower and Upper instance range intersects the
     Lower and Upper instance range bound to the server. Clients may send
     a datagram to any and all interested servers by providing an
-    appropriate name-sequence address to tipc_send/4. 
-    
+    appropriate name-sequence address to tipc_send/4.
+
     * port_id(+Ref, +Node)
     A TIPC port-id is the socket's private   address. It is ephemeral in
     nature. It persists only as long   as  the socket instance persists.
@@ -131,7 +131,7 @@ network features such as automatic link fail-over and hot-swap.
     additional  address  resolution.  The  client    simply   sends  all
     subsequent messages related to a specific  transaction to the server
     instance using the port-id received from the server in its replies.
-    
+
     Sometimes the socket's port-id  alone  is   enough  to  establish an
     ad-hoc session anonymously between parent   and child processes. The
     parent instantiates a socket, then  forks   into  two processes. The

@@ -211,7 +211,7 @@ threads and/or =tuple= predicates
 	in(done), !.
 ==
 
----++  Servers
+##  Servers {#tipc-linda-servers}
 
    The server is the process running the "blackboard process". It is
    part of TIPC Linda. It is a collection of predicates that are
@@ -227,7 +227,7 @@ threads and/or =tuple= predicates
       true.
    ==
 
----++ Clients
+## Clients {#tipc-linda-clients}
 
    The clients are one or more Prolog processes that have connection(s)
    to the server.
