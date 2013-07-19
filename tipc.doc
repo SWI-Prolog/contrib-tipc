@@ -45,6 +45,7 @@ pattern.
 
 \input{tipcoverview.tex}
 \section{ The TIPC libraries: \pllib{tipc/...} }
+\label{sec:tipc-libraries}
 \input{tipcpl.tex}
 \input{tipcbroadcast.tex}
 \input{tipcpaxos.tex}
