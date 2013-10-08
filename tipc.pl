@@ -297,7 +297,7 @@ pattern. For an overview, please see: tipc_overview.txt.
 %
 %	 Waits  for,  and  returns  the  next  datagram.  Like  its  UDP
 %	 counterpart, the data are returned as   a  Prolog string object
-%	 (see string_to_list/2). From is  an   address  structure of the
+%	 (see string_codes/2). From is  an   address  structure of the
 %	 form port_id/2, indicating the sender of the message.
 %
 %         Defined options are:
