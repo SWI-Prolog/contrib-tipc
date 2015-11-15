@@ -318,7 +318,7 @@ static foreign_t
 pl_tipc_setopt(term_t Socket, term_t opt)
 { int socket;
   atom_t a;
-  int arity;
+  size_t arity;
 
   if ( !tipc_get_socket(Socket, &socket) )
     return FALSE;
@@ -393,7 +393,7 @@ pl_tipc_setopt(term_t Socket, term_t opt)
       if ( (rc=nbio_setopt(socket, TCP_NO_DELAY, enable) == 0) )
 	return TRUE;
       if ( rc == -2 )
-  	return pl_error(NULL, 0, NULL, ERR_DOMAIN, opt, "socket_option");
+	return pl_error(NULL, 0, NULL, ERR_DOMAIN, opt, "socket_option");
 
     }
 
@@ -409,7 +409,7 @@ pl_tipc_setopt(term_t Socket, term_t opt)
 	  return TRUE;
 	return FALSE;
       }
-    } 
+    }
   }
 
   return pl_error(NULL, 0, NULL, ERR_DOMAIN, opt, "socket_option");
@@ -501,7 +501,7 @@ pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
 
     while(PL_get_list(tail, head, tail))
     { atom_t name;
-      int arity;
+      size_t arity;
 
       if ( PL_get_name_arity(head, &name, &arity) )
       {
@@ -599,7 +599,7 @@ create_tipc_socket(term_t socket, int type)
 static foreign_t
 tipc_socket(term_t socket, term_t opt)
 { atom_t a;
-  int arity;
+  size_t arity;
 
   if ( PL_get_name_arity(opt, &a, &arity) && arity == 0)
     { int type;
@@ -669,7 +669,7 @@ pl_tipc_bind(term_t Socket, term_t Address, term_t opt)
   size_t addrlen = sizeof(sockaddr);
   int socket;
   atom_t a;
-  int arity;
+  size_t arity;
 
   memset(&sockaddr, 0, sizeof(sockaddr));
 
@@ -753,16 +753,16 @@ pl_tipc_subscribe(term_t Socket, term_t Address,
     p->upper = htonl(p1->upper);
 
     subscr.timeout = htonl(time);
-    subscr.filter = htonl((filt == V1_TIPC_SUB_SERVICE) 
-                          ? TIPC_SUB_SERVICE 
+    subscr.filter = htonl((filt == V1_TIPC_SUB_SERVICE)
+                          ? TIPC_SUB_SERVICE
                           : filt);
   } else {
     memcpy(&subscr.seq, &sockaddr.addr.nameseq, sizeof(subscr.seq));
     subscr.timeout = time;
     subscr.filter = filt;
   }
-  memcpy(&subscr.usr_handle, handle, 
-         (handle_len < sizeof(subscr.usr_handle)) 
+  memcpy(&subscr.usr_handle, handle,
+         (handle_len < sizeof(subscr.usr_handle))
           ? handle_len
           : sizeof(subscr.usr_handle));
 
@@ -821,11 +821,11 @@ pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
     event->s.timeout = ntohl(event->s.timeout);
     event->s.filter = ntohl(event->s.filter);
 
-    if(event->s.filter == TIPC_SUB_SERVICE) 
+    if(event->s.filter == TIPC_SUB_SERVICE)
         event->s.filter = V1_TIPC_SUB_SERVICE;
   }
 
-  switch(event->event) 
+  switch(event->event)
   {
       case TIPC_PUBLISHED:
       case TIPC_WITHDRAWN:
@@ -859,7 +859,7 @@ pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
 			   PL_TERM, Found,
 			   PL_TERM, Port_id))
              return FALSE;
-          
+
           return TRUE;
         }
 
@@ -886,7 +886,7 @@ install_tipc()
          tipc_version = buf[0] - '0';
 
       fclose(fp);
-    } 
+    }
 
   nbio_init("tipc");
 
