@@ -26,7 +26,7 @@ test :-
 	tipc_receive(S, Data, From, [as(codes)]),   % From, will be his port-id. Use it from now on
 	forall(between(1,1000000, _X),
 	       (
-    	       tipc_send(S, Data, From, []),
+	       tipc_send(S, Data, From, []),
 	       tipc_receive(S, Data, From, [as(codes)])
 	       )),
 
@@ -60,7 +60,7 @@ dispatch(Accept, In, Out) :-
 
 loopback(In, Out) :-
 	catch(\+at_end_of_stream(In), Error, (writeln(Error), fail)),
-	read_pending_input(In, Codes, []),
+	read_pending_codes(In, Codes, []),
 	format(Out, '~s', [Codes]),
 	flush_output(Out),
 	loopback(In, Out).
@@ -140,7 +140,7 @@ bind_server(name_seq(Service, Lower, Upper), _Timeout) :-
 	tipc_open_socket(S1, In, Out),
 	format('~w: connected and waiting for data~n', [Myself]),
 	\+at_end_of_stream(In),
-	read_pending_input(In, Data, []),
+	read_pending_codes(In, Data, []),
 
 	format('~w: received: "~s" from: ~w~n', [Myself, Data, From]),
 	format(Out, 'goodbye from ~w', [Myself]),
@@ -156,7 +156,7 @@ start_subscription_servers :-
 	new_server(server1, name_seq(20002, 6, 53), 20),
 	new_server(server2, name_seq(20002, 3, 5), 25),
 	new_server(server3, name_seq(20002, 54, 55), 30),
- 	new_server(server4, name_seq(20002, 56,60), 35),
+	new_server(server4, name_seq(20002, 56,60), 35),
 
 	format('now use "tipc-config -nt=20002" to see the name table~n').
 
@@ -170,7 +170,7 @@ send_greetings(PortId) :-
        flush_output(Out1),
 
        \+at_end_of_stream(In1),
-       read_pending_input(In1, Codes, []),
+       read_pending_codes(In1, Codes, []),
        format('client rvcd: ~s~n', [Codes]),
 
        close(In1),
