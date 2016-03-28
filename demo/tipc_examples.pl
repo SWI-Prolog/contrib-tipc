@@ -60,7 +60,7 @@ dispatch(Accept, In, Out) :-
 
 loopback(In, Out) :-
 	catch(\+at_end_of_stream(In), Error, (writeln(Error), fail)),
-	read_pending_codes(In, Codes, []),
+	get_pending_codes(In, Codes, []),
 	format(Out, '~s', [Codes]),
 	flush_output(Out),
 	loopback(In, Out).
@@ -140,7 +140,7 @@ bind_server(name_seq(Service, Lower, Upper), _Timeout) :-
 	tipc_open_socket(S1, In, Out),
 	format('~w: connected and waiting for data~n', [Myself]),
 	\+at_end_of_stream(In),
-	read_pending_codes(In, Data, []),
+	get_pending_codes(In, Data, []),
 
 	format('~w: received: "~s" from: ~w~n', [Myself, Data, From]),
 	format(Out, 'goodbye from ~w', [Myself]),
@@ -170,7 +170,7 @@ send_greetings(PortId) :-
        flush_output(Out1),
 
        \+at_end_of_stream(In1),
-       read_pending_codes(In1, Codes, []),
+       get_pending_codes(In1, Codes, []),
        format('client rvcd: ~s~n', [Codes]),
 
        close(In1),
