@@ -612,7 +612,7 @@ tipc_socket(term_t socket, term_t opt)
   size_t arity;
 
   if ( PL_get_name_arity(opt, &a, &arity) && arity == 0)
-    { int type;
+  { int type;
 
     if ( a == ATOM_dgram )
       type = SOCK_DGRAM;
@@ -623,11 +623,12 @@ tipc_socket(term_t socket, term_t opt)
     else if ( a == ATOM_stream )
       type = SOCK_STREAM;
     else
-      return pl_error(NULL, 0, NULL, ERR_DOMAIN, opt, "rdm, dgram, seqpacket, or stream");
+      return PL_domain_error("rdm, dgram, seqpacket, or stream", opt);
 
-      return create_tipc_socket(socket, type);
-    }
-    else return pl_error(NULL, 0, NULL, ERR_ARGTYPE, 1, opt, "atom");
+    return create_tipc_socket(socket, type);
+  } else
+  { return pl_error(NULL, 0, NULL, ERR_ARGTYPE, 1, opt, "atom");
+  }
 
   return FALSE;
 }
@@ -718,7 +719,7 @@ pl_tipc_bind(term_t Socket, term_t Address, term_t opt)
     } else
       return pl_error(NULL, 0, NULL, ERR_ARGTYPE, 1, opt, "scoping option");
 
-      return TRUE;
+    return TRUE;
   }
 
   return pl_error(NULL, 0, NULL, ERR_DOMAIN, a, "scope/1");
