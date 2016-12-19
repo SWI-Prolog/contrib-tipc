@@ -58,10 +58,12 @@
 	    tipc_service_exists/2,       % +Address +Timeout
 	    tipc_initialize/0            %
 	  ]).
-
+:- use_module(library(apply)).
+:- use_module(library(lists)).
 :- use_module(library(shlib)).
-
 :- use_foreign_library(foreign(tipc)).
+
+:- multifile tipc_stack_initialize/0.
 
 /** <module> TIPC Sockets
 
@@ -78,7 +80,6 @@ TIPC represents a more generalized version of the same behavioral design
 pattern. For an overview, please see: tipc_overview.txt.
 
 @author	Jeffrey Rosenwald (JeffRose@acm.org)
-@license	LGPL
 @see	<http://tipc.sf.net>, <http://www.erlang.org>
 @compat Linux only
 */
@@ -126,7 +127,7 @@ pattern. For an overview, please see: tipc_overview.txt.
 %	 is made to close a  socket   identifier  that  has already been
 %	 closed.
 
-% % tipc_subscribe(+SocketId, +NameSeqAddress, +Timeout, +Filter, +UserHandle) is det.
+%%	tipc_subscribe(+SocketId, +NameSeqAddress, +Timeout, +Filter, +UserHandle) is det.
 %
 %	 Subscribes to events related to a publisher that is bound to
 %	 the multi-cast address specified in NameSeqAddress.
@@ -363,14 +364,14 @@ pattern. For an overview, please see: tipc_overview.txt.
 %
 %
 
-% %	 tipc_event(+Data, -Event, -Residue) is det.
+%%	tipc_event(+Data, -Event, -Residue) is det.
 %
-%	 Parses event notifications received from   the  topology server
+%	Parses event notifications received from   the  topology server
 %	into Prolog structures. This  predicate   has  been  permanently
 %	removed.
 %
 
-% %	 tipc_receive_subscr_event(+Socket, -Event) is semidet.
+%%	tipc_receive_subscr_event(+Socket, -Event) is semidet.
 %
 %	Receives and parses event notifications received from the
 %	TIPC Topology Server.
@@ -391,15 +392,14 @@ pattern. For an overview, please see: tipc_overview.txt.
 %
 %       Action is one of:
 %
-%	  $ published:
+%	  $ published :
 %         The socket specified by Port_id has been bound to
-%	the name_seq/3 address specified in Found.
+%	  the name_seq/3 address specified in Found.
 %
-%	  $ withdrawn:
+%	  $ withdrawn :
 %         The socket specified by Port_id has been
 %	  unbound from the name_seq/3 address specified in Found. See
-%	the no_scope/1 option of tipc_bind/3.
-%
+%	  the no_scope/1 option of tipc_bind/3.
 
 :- multifile
 	prolog:message/3.
@@ -418,18 +418,23 @@ prolog:message(error(socket_error(Message), _)) -->
 
 integerAsU32(In, Out) :-
 	nonvar(In),
-	(   In < 0 -> Out is In + 0x100000000; Out is In).
-
+	(   In < 0
+        ->  Out is In + 0x100000000
+        ;   Out is In
+        ).
 integerAsU32(In, Out) :-
 	nonvar(Out),
-	(   Out > 0x7fffffff -> In is Out - 0x100000000; In is Out).
+	(   Out > 0x7fffffff
+        ->  In is Out - 0x100000000
+        ;   In is Out
+        ).
 
 tipc_canonical_address(tipc_address(Z,C,N, Ref1), port_id(Ref, Node)) :-
        integerAsU32(Ref, Ref1),
        integerAsU32(Node, X),
-	Z is (X >> 24) /\ 0xFF,
-	C is (X >> 12) /\ 0xFFF,
-	N is X /\ 0xFFF.
+       Z is (X >> 24) /\ 0xFF,
+       C is (X >> 12) /\ 0xFFF,
+       N is X /\ 0xFFF.
 
 user:portray(port_id(Ref, Node)) :-
 	tipc_canonical_address(tipc_address(Z,C,N, Ref1), port_id(Ref, Node)),
@@ -475,8 +480,9 @@ tipc_service_exists(Address, Timeout) :-
 	repeat,
 	    tipc_receive_subscr_event(S, Data),
             (	Data == subscr_timeout
-	    -> (!, fail)
-	    ;  Data = tipc_event(published, NameSeq, _FoundSeq, _Port_id)),
+	    ->  !, fail
+	    ;   Data = tipc_event(published, NameSeq, _FoundSeq, _Port_id)
+            ),
 	!.
 
 %%	tipc_service_probe(?Address) is nondet.
@@ -503,7 +509,8 @@ tipc_service_probe(Address) :-
 	tipc_connect(S, name(1,1,0)),   % connect to the topology server
 	tipc_subscribe(S, name_seq(Type, 0, 4294967295), 0, 2, "swipl"),  % look for everything
 	sp_collect(S, Members),
-	!, member([NameSeq, _], Members).
+	!,
+        member([NameSeq, _], Members).
 
 tipc_service_probe(Address, PortId) :-
 	tipc_address(Address, name_seq(Type, Lower, Upper)),
@@ -513,16 +520,17 @@ tipc_service_probe(Address, PortId) :-
 	tipc_connect(S, name(1,1,0)),   % connect to the topology server
 	tipc_subscribe(S, name_seq(Type, 0, 4294967295), 0, 1, "swipl"),  % look for everything
 	sp_collect(S, Members),
-	!, member([NameSeq, PortId], Members).
+	!,
+        member([NameSeq, PortId], Members).
 
 sp_collect(S, Members) :-
-	findall([NameSeq ,PortId],
-	    (
-	    repeat,
-	    tipc_receive_subscr_event(S, Data),
-	    (	Data == subscr_timeout
-	    -> (!, fail)
-	    ; Data = tipc_event(published, _Service, NameSeq, PortId))
+	findall([NameSeq, PortId],
+	    ( repeat,
+              tipc_receive_subscr_event(S, Data),
+              (   Data == subscr_timeout
+              ->  !, fail
+              ;   Data = tipc_event(published, _Service, NameSeq, PortId)
+              )
 	    ), Members).
 
 %%	tipc_service_port_monitor(+Addresses, :Goal) is det.
@@ -567,12 +575,10 @@ sp_collect(S, Members) :-
 %
 
 spm_dispatch(_Goal, subscr_timeout) :- !.
-
 spm_dispatch(Goal, tipc_event(Action, _Subscr, NameSeq, PortId)) :-
 	Event =.. [Action, NameSeq, PortId],
 	once(call(Goal, Event)), fail.
 
-%
 :- meta_predicate
 	tipc_service_port_monitor(+, 1),
 	tipc_service_port_monitor(+, 1, +).
@@ -580,9 +586,9 @@ spm_dispatch(Goal, tipc_event(Action, _Subscr, NameSeq, PortId)) :-
 tipc_service_port_monitor(Address, Goal) :-
 	tipc_service_port_monitor(Address, Goal, 0.0), !.
 
-tipc_service_port_monitor(Address, Goal, detached(ThreadId)) :-
-	thread_create(tipc_service_port_monitor(Address, Goal, infinite), ThreadId, [detached(true)]), !.
-
+tipc_service_port_monitor(Address, Goal, detached(ThreadId)) :- !,
+	thread_create(tipc_service_port_monitor(Address, Goal, infinite),
+                      ThreadId, [detached(true)]).
 tipc_service_port_monitor(Address, Goal, infinite) :-
 	tipc_service_port_monitor(Address, Goal, -0.001), !.
 
@@ -594,8 +600,8 @@ tipc_service_port_monitor(Addresses, Goal, Timeout) :-
 	forall(member(NameSeq, NameSeqs),
 	       tipc_subscribe(S, NameSeq, ITime, 1, "swipl")),
 	repeat,
-	tipc_receive_subscr_event(S, Data),
-	spm_dispatch(Goal, Data),
+            tipc_receive_subscr_event(S, Data),
+            spm_dispatch(Goal, Data),
         !.
 
 %%     tipc_initialize is semidet.
@@ -611,9 +617,7 @@ tipc_service_port_monitor(Addresses, Goal, Timeout) :-
 
 tipc_initialize :-
 	with_mutex(tipc_mutex,
-		   forall(tipc:tipc_stack_initialize, true)).
+		   forall(tipc_stack_initialize, true)).
 
-:- multifile tipc:tipc_stack_initialize/0.
-
-tipc:tipc_stack_initialize :-
+tipc_stack_initialize :-
 	tipc_service_exists(name(1,1,0)).
