@@ -33,14 +33,14 @@
 */
 
 :- module(tipc_paxos,
-	  [
-	   tipc_paxos_get/1,         % ?Term
-	   tipc_paxos_set/1,         % ?Term
-	   tipc_paxos_set/2,         % ?Term,  +Retries
-	   tipc_paxos_replicate/1,   % ?Term
-	   tipc_paxos_on_change/2,   % ?Term,  +Goal
-	   tipc_initialize/0
-	  ]).
+          [
+           tipc_paxos_get/1,         % ?Term
+           tipc_paxos_set/1,         % ?Term
+           tipc_paxos_set/2,         % ?Term,  +Retries
+           tipc_paxos_replicate/1,   % ?Term
+           tipc_paxos_on_change/2,   % ?Term,  +Goal
+           tipc_initialize/0
+          ]).
 
 :- use_module(tipc_broadcast).
 
@@ -125,7 +125,8 @@ tipc_initialize/0.|_
 %
 
 c_element([New | More], _Old, New) :-
-	forall(member(N, More), N == New), !.
+    forall(member(N, More), N == New),
+    !.
 
 c_element(_List, Old, Old).
 
@@ -136,39 +137,40 @@ c_element(_List, Old, Old).
 %
 
 tipc_paxos_initialize :-
-	listening(tipc_paxos, _, _), !.
+    listening(tipc_paxos, _, _),
+    !.
 
 tipc_paxos_initialize :-
-	listen(tipc_paxos, X, tipc_paxos_message(X)),
-	tipc_basic_paxos_on_change(tipc_paxos, Term, tipc_paxos_audit(Term)).
+    listen(tipc_paxos, X, tipc_paxos_message(X)),
+    tipc_basic_paxos_on_change(tipc_paxos, Term, tipc_paxos_audit(Term)).
 %
 % The Paxos state machine is memoryless. The state is managed by a
 % coordinator.
 %
 tipc_paxos_audit(Term) :-
-	tipc_paxos_get(Term) ->
-	     true;
-	     tipc_paxos_set(Term).
+    tipc_paxos_get(Term) ->
+         true;
+         tipc_paxos_set(Term).
 
 tipc_paxos_message(paxos_prepare(K-Term)) :-
-	recorded(Term, paxons_ledger(K, _Term)),
-	!.
+    recorded(Term, paxons_ledger(K, _Term)),
+    !.
 
 tipc_paxos_message(paxos_prepare(0-Term)) :-
-	recorda(Term, paxons_ledger(0, Term)).
+    recorda(Term, paxons_ledger(0, Term)).
 
 tipc_paxos_message(paxos_accept(K-Term, K)) :-
-	recorded(Term, paxons_ledger(K1, _Term), Ref),
-	K > K1,
-	recorda(Term, paxons_ledger(K, Term)),
-	erase(Ref),
-	!.
+    recorded(Term, paxons_ledger(K1, _Term), Ref),
+    K > K1,
+    recorda(Term, paxons_ledger(K, Term)),
+    erase(Ref),
+    !.
 
 tipc_paxos_message(paxos_accept(_, nack)).
 
 tipc_paxos_message(paxos_retrieve(K-Term)) :-
-	recorded(Term, paxons_ledger(K, Term)),
-	!.
+    recorded(Term, paxons_ledger(K, Term)),
+    !.
 
 %
 % These are the cooordinator predicates
@@ -197,20 +199,20 @@ max_gets(5).
 % number of retries that will be performed before a set is abandoned.
 %
 tipc_paxos_set(Term) :-
-	max_sets(N),
-	tipc_paxos_set(Term, N),
-	!.
+    max_sets(N),
+    tipc_paxos_set(Term, N),
+    !.
 
 tipc_paxos_set(Term, Retries) :-
-	compound(Term),
-	between(0, Retries, _),
-	findall(R, broadcast_request(tipc_cluster(paxos_prepare(R-Term), 0.020)), Rs),
-	max_list(Rs, K),
-	succ(K, K1),
-	findall(R, broadcast_request(tipc_cluster(paxos_accept(K1-Term, R), 0.020)), R1s),
-	c_element(R1s, K, K1),
-	broadcast(tipc_cluster(paxos_changed(Term))),
-	!.
+    compound(Term),
+    between(0, Retries, _),
+    findall(R, broadcast_request(tipc_cluster(paxos_prepare(R-Term), 0.020)), Rs),
+    max_list(Rs, K),
+    succ(K, K1),
+    findall(R, broadcast_request(tipc_cluster(paxos_accept(K1-Term, R), 0.020)), R1s),
+    c_element(R1s, K, K1),
+    broadcast(tipc_cluster(paxos_changed(Term))),
+    !.
 
 %% tipc_paxos_get(?Term) is semidet.
 % unifies Term with the entry   retrieved  from the Paxon's
@@ -225,16 +227,16 @@ tipc_paxos_set(Term, Retries) :-
 %
 
 tipc_paxos_get(Term) :-
-	recorded(Term, paxons_ledger(_K, Term)),
-	!.
+    recorded(Term, paxons_ledger(_K, Term)),
+    !.
 
 tipc_paxos_get(Term) :-
-	max_gets(N),
-	between(1,N, _),
-	findall(K-Term, broadcast_request(tipc_cluster(paxos_retrieve(K-Term), 0.020)), Terms),
-	c_element(Terms, no, K-Term),
-	tipc_paxos_set(Term),
-	!.
+    max_gets(N),
+    between(1,N, _),
+    findall(K-Term, broadcast_request(tipc_cluster(paxos_retrieve(K-Term), 0.020)), Terms),
+    c_element(Terms, no, K-Term),
+    tipc_paxos_set(Term),
+    !.
 
 %% tipc_paxos_replicate(?Term) is det.
 % declares that Term is to be automatically replicated to the quorum
@@ -245,7 +247,7 @@ tipc_paxos_get(Term) :-
 %
 
 tipc_paxos_replicate(X) :-
-	when(ground(X), tipc_paxos_set(X)).
+    when(ground(X), tipc_paxos_set(X)).
 
 %% tipc_paxos_on_change(?Term, :Goal) is det.
 % executes the specified Goal when Term changes. tipc_paxos_on_change/2
@@ -262,23 +264,23 @@ tipc_paxos_replicate(X) :-
 %   discontinued.
 %
 :- meta_predicate
-	tipc_paxos_on_change(?, :).
+    tipc_paxos_on_change(?, :).
 
 tipc_paxos_on_change(Term, Goal) :-
-	must_be(compound, Term),
-	Goal = _:Plain,
-	(   Plain == ignore
-	->  unlisten(tipc_paxos_user, paxos_changed(Term))
-	;   tipc_basic_paxos_on_change(tipc_paxos_user, Term, Goal)
-	).
+    must_be(compound, Term),
+    Goal = _:Plain,
+    (   Plain == ignore
+    ->  unlisten(tipc_paxos_user, paxos_changed(Term))
+    ;   tipc_basic_paxos_on_change(tipc_paxos_user, Term, Goal)
+    ).
 
 % Private
 tipc_basic_paxos_on_change(Owner, Term, Goal) :-
-	callable(Goal),
-	listen(Owner, paxos_changed(Term),
-	       thread_create(Goal, _, [detached(true)])).
+    callable(Goal),
+    listen(Owner, paxos_changed(Term),
+           thread_create(Goal, _, [detached(true)])).
 
-%%	tipc_initialize is semidet.
+%!  tipc_initialize is semidet.
 %   See tipc:tipc_initialize/0.
 %
 
@@ -288,4 +290,5 @@ tipc_basic_paxos_on_change(Owner, Term, Goal) :-
 %   tipc:tipc_initialize/0.
 %
 tipc:tipc_stack_initialize :-
-      tipc_paxos_initialize, !.
+    tipc_paxos_initialize,
+    !.

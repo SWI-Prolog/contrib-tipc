@@ -34,9 +34,9 @@
 
 :- module(tipc_broadcast,
              [
-	     tipc_host_to_address/2,    % ? Host, ? Address
-	     tipc_initialize/0
-	     ]).
+             tipc_host_to_address/2,    % ? Host, ? Address
+             tipc_initialize/0
+             ]).
 
 /** <module> A TIPC Broadcast Bridge
 
@@ -241,13 +241,13 @@ and subtle differences that must be taken into consideration:
 :- use_module(library(unix)).
 
 :- require([ thread_self/1
-	   , forall/2
-	   , term_to_atom/2
-	   , thread_send_message/2
-	   , catch/3
-	   , setup_call_cleanup/3
-	   , thread_create/3
-	   ]).
+           , forall/2
+           , term_to_atom/2
+           , thread_send_message/2
+           , catch/3
+           , setup_call_cleanup/3
+           , thread_create/3
+           ]).
 
 :- meta_predicate safely(0), eventually_implies(0,0), ~>(0,0).
 
@@ -271,12 +271,12 @@ tipc_broadcast_service(zone,            name_seq(20005, 2, 2)).
 %
 
 safely(Predicate) :-
-	catch(Predicate, Err,
-	      (Err == '$aborted' -> (!, fail);
-	      print_message(error, Err), fail)).
+    catch(Predicate, Err,
+          (Err == '$aborted' -> (!, fail);
+          print_message(error, Err), fail)).
 
-%%	~>(:P, :Q) is semidet.
-%%	eventually_implies(:P, :Q) is semidet.
+%!  ~>(:P, :Q) is semidet.
+%!  eventually_implies(:P, :Q) is semidet.
 %    asserts temporal Liveness (something good happens, eventually) and
 %    Safety (nothing bad ever happens) properties. Analogous to the
 %    "leads-to" operator of Owicki and Lamport, 1982. Provides a sort of
@@ -292,144 +292,148 @@ safely(Predicate) :-
 %
 
 eventually_implies(P, Q) :-
-	setup_call_cleanup(P, ( Solution = yes ; Solution = no ), assertion(Q)),
-	Solution = yes.
+    setup_call_cleanup(P, ( Solution = yes ; Solution = no ), assertion(Q)),
+    Solution = yes.
 
 :- op(950, xfy, ~>).
 
 ~>(P, Q) :-
-	eventually_implies(P, Q).
+    eventually_implies(P, Q).
 
 ld_dispatch(S, '$tipc_request'(wru(Name)), From) :-
-	!, tipc_get_name(S, Name),
-	term_to_atom(wru(Name), Atom),
-	tipc_send(S, Atom, From, []).
+    !, tipc_get_name(S, Name),
+    term_to_atom(wru(Name), Atom),
+    tipc_send(S, Atom, From, []).
 
 ld_dispatch(S, '$tipc_request'(Term), From) :-
-	!, forall(broadcast_request(Term),
-	      (   term_to_atom(Term, Atom),
-		  tipc_send(S, Atom, From, []))).
+    !, forall(broadcast_request(Term),
+          (   term_to_atom(Term, Atom),
+              tipc_send(S, Atom, From, []))).
 
 ld_dispatch(_S, Term, _From) :-
-	safely(broadcast(Term)).
+    safely(broadcast(Term)).
 
 tipc_listener_daemon(Parent) :-
-	tipc_socket(S, rdm) ~> tipc_close_socket(S),
+    tipc_socket(S, rdm) ~> tipc_close_socket(S),
 
-%	tipc_setopt(S, importance(medium)),
-	tipc_setopt(S, dest_droppable(true)),  % discard if not deliverable
+%       tipc_setopt(S, importance(medium)),
+    tipc_setopt(S, dest_droppable(true)),  % discard if not deliverable
 
-	forall(tipc_broadcast_service(Scope, Address),
-	     tipc_bind(S, Address, scope(Scope))),
+    forall(tipc_broadcast_service(Scope, Address),
+         tipc_bind(S, Address, scope(Scope))),
 
-	listen(tipc_broadcast, Head, broadcast_listener(Head))
-	     ~> unlisten(tipc_broadcast),
+    listen(tipc_broadcast, Head, broadcast_listener(Head))
+         ~> unlisten(tipc_broadcast),
 
-	thread_send_message(Parent, tipc_listener_daemon_ready),
+    thread_send_message(Parent, tipc_listener_daemon_ready),
 
-	repeat,
-	safely(dispatch_traffic(S)).
+    repeat,
+    safely(dispatch_traffic(S)).
 
 dispatch_traffic(S) :-
-	tipc_receive(S, Data, From, [as(atom)]),
-	term_to_atom(Term, Data),
-	ld_dispatch(S, Term, From), !,
-	dispatch_traffic(S).
+    tipc_receive(S, Data, From, [as(atom)]),
+    term_to_atom(Term, Data),
+    ld_dispatch(S, Term, From),
+    !,
+    dispatch_traffic(S).
 
 start_tipc_listener_daemon :-
-	catch(thread_property(tipc_listener_daemon, status(running)),_, fail),
-	!.
+    catch(thread_property(tipc_listener_daemon, status(running)),_, fail),
+    !.
 
 start_tipc_listener_daemon :-
-	thread_self(Self),
-	thread_create(tipc_listener_daemon(Self), _,
-	       [alias(tipc_listener_daemon), detached(true)]),
-	call_with_time_limit(6.0,
-			     thread_get_message(tipc_listener_daemon_ready)).
+    thread_self(Self),
+    thread_create(tipc_listener_daemon(Self), _,
+           [alias(tipc_listener_daemon), detached(true)]),
+    call_with_time_limit(6.0,
+                         thread_get_message(tipc_listener_daemon_ready)).
 
 :- multifile tipc:host_to_address/2.
 %
 broadcast_listener(tipc_host_to_address(Host, Addr)) :-
-	tipc:host_to_address(Host, Addr).
+    tipc:host_to_address(Host, Addr).
 
 broadcast_listener(tipc_broadcast_service(Class, Addr)) :-
-	tipc_broadcast_service(Class, Addr).
+    tipc_broadcast_service(Class, Addr).
 
 broadcast_listener(tipc_node(X)) :-
-	tipc_broadcast(X, node, 0.250).
+    tipc_broadcast(X, node, 0.250).
 
 broadcast_listener(tipc_cluster(X)) :-
-	tipc_broadcast(X, cluster, 0.250).
+    tipc_broadcast(X, cluster, 0.250).
 
 broadcast_listener(tipc_zone(X)) :-
-	tipc_broadcast(X, zone, 0.250).
+    tipc_broadcast(X, zone, 0.250).
 
 broadcast_listener(tipc_node(X, Timeout)) :-
-	tipc_broadcast(X, node, Timeout).
+    tipc_broadcast(X, node, Timeout).
 
 broadcast_listener(tipc_cluster(X, Timeout)) :-
-	tipc_broadcast(X, cluster, Timeout).
+    tipc_broadcast(X, cluster, Timeout).
 
 broadcast_listener(tipc_zone(X, Timeout)) :-
-	tipc_broadcast(X, zone, Timeout).
+    tipc_broadcast(X, zone, Timeout).
 
 %
 %
 
 tipc_basic_broadcast(S, Term, Address) :-
-	tipc_socket(S, rdm) ~> tipc_close_socket(S),
-%	tipc_setopt(S, importance(medium)),
-	term_to_atom(Term, Atom),
-	safely(tipc_send(S, Atom, Address, [])).
+    tipc_socket(S, rdm) ~> tipc_close_socket(S),
+%   tipc_setopt(S, importance(medium)),
+    term_to_atom(Term, Atom),
+    safely(tipc_send(S, Atom, Address, [])).
 
 % directed broadcast to a single listener
 tipc_broadcast(Term:To, _Scope, _Timeout) :-
-	ground(Term), ground(To), !,
-	tipc_basic_broadcast(_S, Term, To),
-	!.
+    ground(Term), ground(To),
+    !,
+    tipc_basic_broadcast(_S, Term, To),
+    !.
 
 % broadcast to all listeners
 tipc_broadcast(Term, Scope, _Timeout) :-
-	ground(Term), !,
-	tipc_broadcast_service(Scope, Address),
-	tipc_basic_broadcast(_S, Term, Address),
-	!.
+    ground(Term),
+    !,
+    tipc_broadcast_service(Scope, Address),
+    tipc_basic_broadcast(_S, Term, Address),
+    !.
 
 % directed broadcast_request to a single listener
 tipc_broadcast(Term:Address, _Scope, Timeout) :-
-	ground(Address), !,
-        tipc_basic_broadcast(S, '$tipc_request'(Term), Address),
-	tipc_br_collect_replies(S, Timeout, Term:Address).
+    ground(Address),
+    !,
+    tipc_basic_broadcast(S, '$tipc_request'(Term), Address),
+    tipc_br_collect_replies(S, Timeout, Term:Address).
 
 % broadcast_request to all listeners returning responder port-id
 tipc_broadcast(Term:From, Scope, Timeout) :-
-	!, tipc_broadcast_service(Scope, Address),
-        tipc_basic_broadcast(S, '$tipc_request'(Term), Address),
-	tipc_br_collect_replies(S, Timeout, Term:From).
+    !, tipc_broadcast_service(Scope, Address),
+    tipc_basic_broadcast(S, '$tipc_request'(Term), Address),
+    tipc_br_collect_replies(S, Timeout, Term:From).
 
 % broadcast_request to all listeners ignoring responder port-id
 tipc_broadcast(Term, Scope, Timeout) :-
-	tipc_broadcast(Term:_, Scope, Timeout).
+    tipc_broadcast(Term:_, Scope, Timeout).
 
 tipc_br_send_timeout(Port) :-
-	tipc_socket(S, rdm) ~> tipc_close_socket(S),
+    tipc_socket(S, rdm) ~> tipc_close_socket(S),
 
-	tipc_setopt(S, importance(critical)),
-	tipc_send(S, '$tipc_br_timeout', Port, []),
-	!.
+    tipc_setopt(S, importance(critical)),
+    tipc_send(S, '$tipc_br_timeout', Port, []),
+    !.
 
 tipc_br_collect_replies(S, Timeout, Term:From) :-
-	tipc_get_name(S, Port),
-	alarm(Timeout, tipc_br_send_timeout(Port), Id)
-	     ~> remove_alarm(Id),
-	tipc_setopt(S, dispatch(false)),
-	repeat,
-        tipc_receive(S, Atom, From1, [as(atom)]),
-        (   (Atom \== '$tipc_br_timeout')
-	    -> (From1 = From, safely(term_to_atom(Term, Atom)))
-	    ;  (!, fail)).
+    tipc_get_name(S, Port),
+    alarm(Timeout, tipc_br_send_timeout(Port), Id)
+         ~> remove_alarm(Id),
+    tipc_setopt(S, dispatch(false)),
+    repeat,
+    tipc_receive(S, Atom, From1, [as(atom)]),
+    (   (Atom \== '$tipc_br_timeout')
+        -> (From1 = From, safely(term_to_atom(Term, Atom)))
+        ;  (!, fail)).
 
-%%	tipc_host_to_address(?Service, ?Address) is nondet.
+%!  tipc_host_to_address(?Service, ?Address) is nondet.
 %
 %   locates a TIPC service by name. Service  is an atom or grounded term
 %   representing the common name  of  the   service.  Address  is a TIPC
@@ -443,9 +447,9 @@ tipc_br_collect_replies(S, Timeout, Term:From) :-
 %
 
 tipc_host_to_address(Host, Address) :-
-	broadcast_request(tipc_zone(tipc_host_to_address(Host, Address))).
+    broadcast_request(tipc_zone(tipc_host_to_address(Host, Address))).
 
-%%	tipc_initialize is semidet.
+%!  tipc_initialize is semidet.
 %   See tipc:tipc_initialize/0
 %
 :- multifile tipc:tipc_stack_initialize/0.
@@ -457,4 +461,4 @@ tipc_host_to_address(Host, Address) :-
 %   applications intialization directive.
 %
 tipc:tipc_stack_initialize :-
-	start_tipc_listener_daemon.
+    start_tipc_listener_daemon.

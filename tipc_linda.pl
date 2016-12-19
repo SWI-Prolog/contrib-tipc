@@ -33,46 +33,46 @@
 */
 
 :- module(tipc_linda,
-	  [
-	   linda/0,                  %
-	   linda/1,                  % +Term
-	   linda_client/1,           % +Address
-	   close_client/0,           %
-	   linda_timeout/1,	     % +Number
-	   linda_timeout/2,          % ?Number, ?Number
-	   out/1,                    % +Term
-	   in/1,		     % ?Term
-	   in_noblock/1,             % ?Term
-	   in/2,                     % +List, ?Term
-	   rd/1,                     % ?Term
-	   rd_noblock/1,             % ?Term
-	   rd/2,                     % +List, ?Term
-	   bagof_rd_noblock/3,       % +Template, ?Term, -Bag
-	   bagof_in_noblock/3,	     % +Template, ?Term, -Bag
-	   linda_eval/1,             % :Head
-	   linda_eval/2,	     % ?Head, :Body
-	   linda_eval_detached/1,    % :Head
-	   linda_eval_detached/2,    % ?Head, :Body
-	   tuple/1,                  % :Goal
-	   tuple/2,		     % ?Head, :Body
-	   tipc_linda_server/0,	     %
-	   tipc_initialize/0
-	  ]).
+          [
+           linda/0,                  %
+           linda/1,                  % +Term
+           linda_client/1,           % +Address
+           close_client/0,           %
+           linda_timeout/1,          % +Number
+           linda_timeout/2,          % ?Number, ?Number
+           out/1,                    % +Term
+           in/1,                     % ?Term
+           in_noblock/1,             % ?Term
+           in/2,                     % +List, ?Term
+           rd/1,                     % ?Term
+           rd_noblock/1,             % ?Term
+           rd/2,                     % +List, ?Term
+           bagof_rd_noblock/3,       % +Template, ?Term, -Bag
+           bagof_in_noblock/3,       % +Template, ?Term, -Bag
+           linda_eval/1,             % :Head
+           linda_eval/2,             % ?Head, :Body
+           linda_eval_detached/1,    % :Head
+           linda_eval_detached/2,    % ?Head, :Body
+           tuple/1,                  % :Goal
+           tuple/2,                  % ?Head, :Body
+           tipc_linda_server/0,      %
+           tipc_initialize/0
+          ]).
 
 :- use_module(library(tipc/tipc_broadcast)).
 :- use_module(library(unix)).
 
 :- require([ broadcast/1
-	   , broadcast_request/1
-	   , throw/1
-	   , member/2
-	   , must_be/2
-	   , catch/3
-	   , flag/3
-	   , listen/3
-	   , setup_call_cleanup/3
-	   , strip_module/3
-	   ]).
+           , broadcast_request/1
+           , throw/1
+           , member/2
+           , must_be/2
+           , catch/3
+           , flag/3
+           , listen/3
+           , setup_call_cleanup/3
+           , strip_module/3
+           ]).
 
 
 /** <module> A Process Communication Interface
@@ -123,8 +123,8 @@ produce(X) :- .....
 In client 2:
 ==
 init_consumer :-
-	linda_client(global),
-	consumer.
+        linda_client(global),
+        consumer.
 
 consumer :-
        in(p(A)),
@@ -177,17 +177,17 @@ threads and/or =tuple= predicates
 
 ==
   consumer1 :-
-	repeat,
-	in([p(_), quit], Y),
-	(   Y = p(Z) -> writeln(consuming(Z)); !),
-	fail.
+        repeat,
+        in([p(_), quit], Y),
+        (   Y = p(Z) -> writeln(consuming(Z)); !),
+        fail.
 
   producer1 :-
-	forall(between(1,40, X), out(p(X))).
+        forall(between(1,40, X), out(p(X))).
 
   producer_consumer1 :-
-	linda_eval(consumer1),
-	call_cleanup(producer1, out(quit)), !.
+        linda_eval(consumer1),
+        call_cleanup(producer1, out(quit)), !.
 %
 %
   consumer2 :-
@@ -197,23 +197,23 @@ threads and/or =tuple= predicates
        consumer2.
 
   producer2 :-
-	linda_eval(p(X), between(1,40, X)).
+        linda_eval(p(X), between(1,40, X)).
 
   producer_consumer2 :-
-	producer2,
-	linda_eval(consumer2), !.
+        producer2,
+        linda_eval(consumer2), !.
 %
 %
   consumer3 :-
-	forall(rd_noblock(p(X)), writeln(consuming(X))).
+        forall(rd_noblock(p(X)), writeln(consuming(X))).
 
   producer3 :-
-	tuple(p(X), between(1,40, X)).
+        tuple(p(X), between(1,40, X)).
 
   producer_consumer3 :-
-	producer3,
-	linda_eval(done, consumer3),
-	in(done), !.
+        producer3,
+        linda_eval(done, consumer3),
+        in(done), !.
 ==
 
 ##  Servers {#tipc-linda-servers}
@@ -258,11 +258,11 @@ Programs: A First Course.|_ The MIT Press, Cambridge, MA, 1990.
 :- meta_predicate eventually_implies(0,0), ~>(0,0), safely(0).
 
 safely(Goal) :-
-	catch(Goal, Err, (print_message(error, Err), fail)).
+    catch(Goal, Err, (print_message(error, Err), fail)).
 
 eventually_implies(P, Q) :-
-	setup_call_cleanup(P, (Foo = true; Foo = false), assertion(Q)),
-	Foo == true.
+    setup_call_cleanup(P, (Foo = true; Foo = false), assertion(Q)),
+    Foo == true.
 
 :- op(950, xfy, ~>).
 
@@ -278,41 +278,43 @@ eventually_implies(P, Q) :-
 linda_action(rd(listening)) :- !.
 
 linda_action(in(TupleList, Tuple)) :-
-	member(Tuple, TupleList),
-	retract(linda_data(Tuple)), !.
+    member(Tuple, TupleList),
+    retract(linda_data(Tuple)),
+    !.
 
 linda_action(in(Tuple)) :-
-	retract(linda_data(Tuple)), !.
+    retract(linda_data(Tuple)),
+    !.
 
 linda_action(out(Tuple)) :-
-	assert(linda_data(Tuple)).
+    assert(linda_data(Tuple)).
 
 linda_action(rd(TupleList, Tuple)) :-
-	member(Tuple, TupleList),
-	linda_data(Tuple).
+    member(Tuple, TupleList),
+    linda_data(Tuple).
 
 linda_action(rd(Tuple)) :-
-	linda_data(Tuple).
+    linda_data(Tuple).
 
-linda_action(bagof_rd_noblock(Template,	Var^Tuple, Bag)) :-
-	!, bagof(Template, Var^linda_data(Tuple), Bag).
+linda_action(bagof_rd_noblock(Template, Var^Tuple, Bag)) :-
+    !, bagof(Template, Var^linda_data(Tuple), Bag).
 
 linda_action(bagof_rd_noblock(Template, Tuple, Bag)) :-
-	!, bagof(Template, linda_data(Tuple), Bag).
+    !, bagof(Template, linda_data(Tuple), Bag).
 
-linda_action(bagof_in_noblock(Template,	Var^Tuple, Bag)) :-
-	Datum = linda_data(Tuple),
-	!, bagof(Template, Var^(Datum, retract(Datum)), Bag).
+linda_action(bagof_in_noblock(Template, Var^Tuple, Bag)) :-
+    Datum = linda_data(Tuple),
+    !, bagof(Template, Var^(Datum, retract(Datum)), Bag).
 
 linda_action(bagof_in_noblock(Template, Tuple, Bag)) :-
-	!, bagof(Template, retract(linda_data(Tuple)), Bag).
+    !, bagof(Template, retract(linda_data(Tuple)), Bag).
 
 %
 %    This is the user interface
 %
 
-%%	linda is det.
-%%	linda(:Goal) is det.
+%!  linda is det.
+%!  linda(:Goal) is det.
 %   Starts a Linda-server in this process. The
 %   network address is written to current output stream as a TIPC
 %   port_id/2 reference (e.g. port_id('<1.1.1:3200515722>') ). This
@@ -341,24 +343,27 @@ linda_action(bagof_in_noblock(Template, Tuple, Bag)) :-
 %
 
 linda_listening(Addr) :-
-	basic_request(rd(listening), Addr), !.
+    basic_request(rd(listening), Addr),
+    !.
 
 linda :-
-	linda_listening(Addr), !,
-	format('TIPC Linda server still listening at: ~p~n', [Addr]).
+    linda_listening(Addr),
+    !,
+    format('TIPC Linda server still listening at: ~p~n', [Addr]).
 
 linda :-
-	listen(tipc_linda, '$linda'(Action), linda_action(Action)),
-	linda_listening(Addr), !,
-	format('TIPC Linda server now listening at: ~p~n', [Addr]).
+    listen(tipc_linda, '$linda'(Action), linda_action(Action)),
+    linda_listening(Addr),
+    !,
+    format('TIPC Linda server now listening at: ~p~n', [Addr]).
 
 :- meta_predicate linda(0).
 
 linda(Hook) :-
-	linda,
-	call(Hook).
+    linda,
+    call(Hook).
 
-%%	linda_client(+Domain) is semidet.
+%!  linda_client(+Domain) is semidet.
 %
 %    Establishes a connection to a Linda-server  providing a named tuple
 %    space. Domain is  an  atom   specifying  a  particular tuple-space,
@@ -369,17 +374,18 @@ linda(Hook) :-
 %
 
 linda_client(global) :-
-	linda_listening(Addr), !,
-	format('TIPC Linda server listening at: ~p~n', [Addr]).
+    linda_listening(Addr),
+    !,
+    format('TIPC Linda server listening at: ~p~n', [Addr]).
 
-%%	close_client is det.
+%!  close_client is det.
 %
 % Closes the connection to  the  Linda-server.   Causes  the  server  to
 % release resources associated with this client.
 
 close_client :- true.   % Presently a noop
 
-%%	linda_timeout(?OldTime, ?NewTime) is semidet.
+%!  linda_timeout(?OldTime, ?NewTime) is semidet.
 %
 % Controls Linda's message-passing timeout. It specifies the time window
 % where clients will accept server replies in  response to =in= and =rd=
@@ -403,30 +409,33 @@ close_client :- true.   % Presently a noop
 :- thread_local linda_time_out/1.
 
 linda_timeout(Time, Time) :-
-	linda_time_out(Time), !.
+    linda_time_out(Time),
+    !.
 
 linda_timeout(_OldTime, NewTime) :-
-	NewTime == off,
-	throw(error(feature_not_supported)).
+    NewTime == off,
+    throw(error(feature_not_supported)).
 
 linda_timeout(OldTime, NewTime) :-
-	ground(NewTime),
-	NewTime = Seconds:Milliseconds,
-	NewTime1 is float(Seconds + (Milliseconds / 1000.0)),
-	linda_timeout(OldTime, NewTime1), !.
+    ground(NewTime),
+    NewTime = Seconds:Milliseconds,
+    NewTime1 is float(Seconds + (Milliseconds / 1000.0)),
+    linda_timeout(OldTime, NewTime1),
+    !.
 
 linda_timeout(OldTime, NewTime) :-
-	ground(NewTime),
-	NewTime >= 0.020,
-	clause(linda_time_out(OldTime), true, Ref),
-	asserta(linda_time_out(NewTime)) -> erase(Ref), !.
+    ground(NewTime),
+    NewTime >= 0.020,
+    clause(linda_time_out(OldTime), true, Ref),
+    asserta(linda_time_out(NewTime)) -> erase(Ref),
+    !.
 
 linda_timeout(0.250, NewTime) :-
-	NewTime >= 0.020,
-	asserta(linda_time_out(NewTime)).
+    NewTime >= 0.020,
+    asserta(linda_time_out(NewTime)).
 
 
-%%	linda_timeout(+NewTime) is semidet.
+%!  linda_timeout(+NewTime) is semidet.
 %
 % Temporarily sets Linda's timeout. Internally,  the original timeout is
 % saved and then the timeout is set  to NewTime. NewTime is as described
@@ -435,25 +444,26 @@ linda_timeout(0.250, NewTime) :-
 %
 
 linda_timeout(NewTime) :-
-	linda_timeout(OldTime, NewTime) ~>
-	    linda_timeout(NewTime, OldTime).
+    linda_timeout(OldTime, NewTime) ~>
+        linda_timeout(NewTime, OldTime).
 
 basic_request(Action) :-
-	basic_request(Action, _Addr).
+    basic_request(Action, _Addr).
 
 basic_request(Action, Addr) :-
-	linda_timeout(Time, Time),
-	broadcast_request(tipc_cluster('$linda'(Action):Addr, Time)).
+    linda_timeout(Time, Time),
+    broadcast_request(tipc_cluster('$linda'(Action):Addr, Time)).
 
-%%	out(+Tuple) is det.
+%!  out(+Tuple) is det.
 %
 %    Places a Tuple in Linda's tuple-space.
 %
 
 out(Tuple) :-
-	broadcast(tipc_cluster('$linda'(out(Tuple)))), !.
+    broadcast(tipc_cluster('$linda'(out(Tuple)))),
+    !.
 
-%%	in(?Tuple) is det.
+%!  in(?Tuple) is det.
 %
 %    Atomically removes the tuple Tuple from   Linda's tuple-space if it
 %    is there. The tuple will be returned   to exactly one requestor. If
@@ -461,59 +471,62 @@ out(Tuple) :-
 %    (that is, someone performs an out/1).
 
 in(Tuple) :-
-	repeat,
-	in_noblock(Tuple), !.
+    repeat,
+    in_noblock(Tuple),
+    !.
 
-%%	in_noblock(?Tuple) is semidet.
+%!  in_noblock(?Tuple) is semidet.
 %
 %    Atomically removes the tuple Tuple from   Linda's tuple-space if it
 %    is there. If not, the predicate fails.  This predicate can fail due
 %    to a timeout.
 
 in_noblock(Tuple) :-
-	basic_request(in(Tuple)), !.
+    basic_request(in(Tuple)),
+    !.
 
-%%	in(+TupleList, -Tuple) is det.
+%!  in(+TupleList, -Tuple) is det.
 %
 %    As in/1 but succeeds when any  one   of  the tuples in TupleList is
 %    available. Tuple is unified with the fetched tuple.
 
 in(TupleList, Tuple) :-
-	must_be(list, TupleList),
-	repeat,
-	basic_request(in(TupleList, Tuple)), !.
+    must_be(list, TupleList),
+    repeat,
+    basic_request(in(TupleList, Tuple)),
+    !.
 
-%%	rd(?Tuple) is nondet.
+%!  rd(?Tuple) is nondet.
 %
 %    Succeeds  nondeterministically  if  Tuple  is    available  in  the
 %    tuple-space, suspends otherwise until it is available. Compare this
 %    with in/1: the tuple is not removed.
 
 rd(Tuple) :-
-	repeat,
-	rd_noblock(Tuple).
+    repeat,
+    rd_noblock(Tuple).
 
-%%	rd_noblock(?Tuple) is nondet.
+%!  rd_noblock(?Tuple) is nondet.
 %
 %    Succeeds  nondeterministically  if  Tuple  is    available  in  the
 %    tuple-space, fails otherwise. This predicate  can   fail  due  to a
 %    timeout.
 
 rd_noblock(Tuple) :-
-	basic_request(rd(Tuple)).
+    basic_request(rd(Tuple)).
 
-%%	rd(?TupleList, -Tuple) is nondet.
+%!  rd(?TupleList, -Tuple) is nondet.
 %
 %    As in/2 but provides a  choice  point   that  does  not  remove any
 %    tuples.
 
 rd(TupleList, Tuple) :-
-	must_be(list, TupleList),
-	repeat,
-	basic_request(rd(TupleList, Tuple)).
+    must_be(list, TupleList),
+    repeat,
+    basic_request(rd(TupleList, Tuple)).
 
-%%	bagof_in_noblock(?Template, ?Tuple, -Bag) is nondet.
-%%	bagof_rd_noblock(?Template, ?Tuple, -Bag) is nondet.
+%!  bagof_in_noblock(?Template, ?Tuple, -Bag) is nondet.
+%!  bagof_rd_noblock(?Template, ?Tuple, -Bag) is nondet.
 %
 %    Bag is the list of all instances of Template such that Tuple exists
 %    in the tuple-space. The behavior of variables in Tuple and Template
@@ -540,10 +553,10 @@ rd(TupleList, Tuple) :-
 %  ==
 
 bagof_rd_noblock(Template,  Tuple, Bag) :-
-	!, basic_request(bagof_rd_noblock(Template, Tuple, Bag)).
+    !, basic_request(bagof_rd_noblock(Template, Tuple, Bag)).
 
 bagof_in_noblock(Template,  Tuple, Bag) :-
-	!, basic_request(bagof_in_noblock(Template, Tuple, Bag)).
+    !, basic_request(bagof_in_noblock(Template, Tuple, Bag)).
 
 :- meta_predicate
       linda_eval(?, 0),
@@ -551,10 +564,10 @@ bagof_in_noblock(Template,  Tuple, Bag) :-
       linda_eval_detached(?, 0),
       linda_eval_detached(0).
 
-%%	linda_eval(:Goal) is det.
-%%	linda_eval(?Head, :Goal) is det.
-%%	linda_eval_detached(:Goal) is det.
-%%	linda_eval_detached(?Head, :Goal) is det.
+%!  linda_eval(:Goal) is det.
+%!  linda_eval(?Head, :Goal) is det.
+%!  linda_eval_detached(:Goal) is det.
+%!  linda_eval_detached(?Head, :Goal) is det.
 %
 %  Causes Goal to be evaluated in parallel  with a parent predicate. The
 %  child  thread  is  a  full-fledged    client,   possessing  the  same
@@ -589,32 +602,32 @@ bagof_in_noblock(Template,  Tuple, Bag) :-
 % qksort([], []).
 %
 % qksort([X | List], Sorted) :-
-%	partition(@>(X), List, Less, More),
-%	linda_eval(qksort(More, SortedMore)),
-%	qksort(Less, SortedLess), !,
-%	in_noblock(qksort(More, SortedMore)),
-%	append(SortedLess, [X | SortedMore], Sorted).
+%       partition(@>(X), List, Less, More),
+%       linda_eval(qksort(More, SortedMore)),
+%       qksort(Less, SortedLess), !,
+%       in_noblock(qksort(More, SortedMore)),
+%       append(SortedLess, [X | SortedMore], Sorted).
 % ==
 %
 linda_eval(Head) :-
-	linda_eval(Head, Head).
+    linda_eval(Head, Head).
 
 linda_eval(Head, Body) :-
-	must_be(callable, Body),
-	strip_module(Head, _Module, Plain),
-	thread_create(forall(Body, out(Plain)), Id, []) ~>
-	   thread_join(Id, true).
+    must_be(callable, Body),
+    strip_module(Head, _Module, Plain),
+    thread_create(forall(Body, out(Plain)), Id, []) ~>
+       thread_join(Id, true).
 
 linda_eval_detached(Head) :-
-	linda_eval_detached(Head, Head).
+    linda_eval_detached(Head, Head).
 
 linda_eval_detached(Head, Body) :-
-	must_be(callable, Body),
-	strip_module(Head, _Module, Plain),
-	thread_create(forall(Body, out(Plain)), _Id, [detached(true)]).
+    must_be(callable, Body),
+    strip_module(Head, _Module, Plain),
+    thread_create(forall(Body, out(Plain)), _Id, [detached(true)]).
 
-%%	tuple(:Goal) is det.
-%%      tuple(?Head, :Goal) is det.
+%!  tuple(:Goal) is det.
+%!  tuple(?Head, :Goal) is det.
 %
 %  registers Head as a virtual tuple  in   TIPC  Linda's tuple space. On
 %  success, any client on the  cluster   may  reference the tuple, Head,
@@ -641,13 +654,13 @@ linda_eval_detached(Head, Body) :-
 :- meta_predicate tuple(?, 0), tuple(0).
 
 tuple(Head) :-
-	tuple(Head, Head).
+    tuple(Head, Head).
 
 tuple(Head, Body) :-
-	must_be(callable, Body),
-	strip_module(Head, _Module, Plain),
-	listen(user, '$linda'(rd(Plain)), Body) ~>
-	    unlisten(user, '$linda'(rd(Plain)), Body).
+    must_be(callable, Body),
+    strip_module(Head, _Module, Plain),
+    listen(user, '$linda'(rd(Plain)), Body) ~>
+        unlisten(user, '$linda'(rd(Plain)), Body).
 
 %% tipc_linda_server is nondet.
 %
@@ -674,16 +687,16 @@ tuple(Head, Body) :-
 %
 %
 wait_for_quit :-
-	linda_timeout(6.0),
-	in(server_quit),
-	halt(0).
+    linda_timeout(6.0),
+    in(server_quit),
+    halt(0).
 
 tipc_linda_server :-
-%	detach_IO,               % become a daemon
-	tipc_initialize,
-	(   linda_client(global) -> true; linda(wait_for_quit)).
+%   detach_IO,               % become a daemon
+            tipc_initialize,
+            (   linda_client(global) -> true; linda(wait_for_quit)).
 
-%%	tipc_initialize is semidet.
+%!  tipc_initialize is semidet.
 %
 %   See tipc:tipc_initialize/0.
 %
