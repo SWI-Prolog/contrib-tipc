@@ -33,10 +33,9 @@
 */
 
 :- module(tipc_broadcast,
-             [
-             tipc_host_to_address/2,    % ? Host, ? Address
-             tipc_initialize/0
-             ]).
+          [ tipc_host_to_address/2,             % ?Host, ?Address
+            tipc_initialize/0
+          ]).
 
 /** <module> A TIPC Broadcast Bridge
 
