@@ -43,6 +43,9 @@
 :- use_module(tipc_broadcast).
 :- use_module(library(broadcast)).
 :- use_module(library(lists)).
+:- use_module(library(settings)).
+:- use_module(library(option)).
+:- use_module(library(error)).
 
 /** <module> A Replicated Data Store
 
@@ -122,6 +125,14 @@ tipc_initialize/0.|_
     tipc_paxos_on_change(?, 0),
     tipc_basic_paxos_on_change(+, +, 0).
 
+:- setting(max_sets, nonneg, 20,
+           "Max Retries to get to an agreement").
+:- setting(max_gets, nonneg, 5,
+           "Max Retries to get a value from the forum").
+:- setting(response_timeout, float, 0.020,
+           "Max time to wait for a response").
+
+
 %!  c_element(+NewList, +Old, -Value)
 %
 %   A Muller c-element is a logic block  used in asynchronous logic. Its
@@ -171,14 +182,8 @@ tipc_paxos_message(paxos_retrieve(K-Term)) :-
     recorded(Term, paxons_ledger(K, Term)),
     !.
 
-%
-% These are the cooordinator predicates
-%
-max_sets(20).    % retry N times before failing
-max_gets(5).
-
 %%  tipc_paxos_set(?Term) is semidet.
-%%  tipc_paxos_set(?Term, +Retries) is semidet.
+%%  tipc_paxos_set(?Term, +Options) is semidet.
 %
 %   negotiates to have Term recorded  in  the   ledger  for  each of the
 %   quorum's members. This predicate succeeds  if the quorum unanimously
@@ -194,26 +199,45 @@ max_gets(5).
 %   On  success,  tipc_paxos_set/1  will   also    broadcast   the  term
 %   =|paxos_changed(Term)|=, to the quorum.
 %
+%   Options processed:
+%
+%     - retry(Retries)
+%     is a non-negative integer specifying the number of retries that
+%     will be performed before a set is abandoned.  Defaults to the
+%     _setting_ `max_sets` (20).
+%     - timeout(+Seconds)
+%     Max time to wait for the forum to reply.  Defaults to the
+%     _setting_ `response_timeout` (0.020, 20ms).
+%
 %   @arg Term is a compound  that   may  have  unbound variables.
-%   @arg Retries (optional) is a non-negative integer specifying
-%   the number of retries that will be performed before a set is
-%   abandoned.
 
 tipc_paxos_set(Term) :-
-    max_sets(N),
-    tipc_paxos_set(Term, N),
-    !.
+    tipc_paxos_set(Term, []).
 
 tipc_paxos_set(Term, Retries) :-
-    compound(Term),
+    integer(Retries),                           % backward compatibility
+    !,
+    tipc_paxos_set(Term, [retry(Retries)]).
+tipc_paxos_set(Term, Options) :-
+    must_be(compound, Term),
+    option(retry(Retries), Options, Retries),
+    option(timeout(TMO), Options, TMO),
+    apply_default(Retries, max_sets),
+    apply_default(TMO, response_timeout),
     between(0, Retries, _),
-    findall(R, broadcast_request(tipc_cluster(paxos_prepare(R-Term), 0.020)), Rs),
+    findall(R, broadcast_request(tipc_cluster(paxos_prepare(R-Term), TMO)), Rs),
     max_list(Rs, K),
     succ(K, K1),
-    findall(R, broadcast_request(tipc_cluster(paxos_accept(K1-Term, R), 0.020)), R1s),
+    findall(R, broadcast_request(tipc_cluster(paxos_accept(K1-Term, R), TMO)), R1s),
     c_element(R1s, K, K1),
     broadcast(tipc_cluster(paxos_changed(Term))),
     !.
+
+apply_default(Var, Setting) :-
+    var(Var),
+    !,
+    setting(Setting, Var).
+apply_default(_, _).
 
 %!  tipc_paxos_get(?Term) is semidet.
 %
@@ -231,8 +255,8 @@ tipc_paxos_get(Term) :-
     recorded(Term, paxons_ledger(_K, Term)),
     !.
 tipc_paxos_get(Term) :-
-    max_gets(N),
-    between(1,N, _),
+    setting(max_gets, N),
+    between(1, N, _),
     findall(K-Term, broadcast_request(tipc_cluster(paxos_retrieve(K-Term), 0.020)), Terms),
     c_element(Terms, no, K-Term),
     tipc_paxos_set(Term),
