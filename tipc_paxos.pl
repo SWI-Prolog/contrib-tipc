@@ -113,7 +113,7 @@ _|Note also that tipc_paxos now requires an initialization step. See
 tipc_initialize/0.|_
 
 @author    Jeffrey Rosenwald (JeffRose@acm.org)
-@license   LGPL
+@license   BSD-2
 @see       tipc_broadcast.pl
 @compat    Linux only, tipc_broadcast
 */
