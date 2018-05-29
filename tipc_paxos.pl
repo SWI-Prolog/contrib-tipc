@@ -37,15 +37,15 @@
             tipc_paxos_set/1,         % ?Term
             tipc_paxos_set/2,         % ?Term, +Retries
             tipc_paxos_replicate/1,   % ?Term
-            tipc_paxos_on_change/2,   % ?Term, +Goal
-            tipc_initialize/0
+            tipc_paxos_on_change/2    % ?Term, +Goal
           ]).
-:- use_module(tipc_broadcast).
 :- use_module(library(broadcast)).
+:- use_module(library(debug)).
 :- use_module(library(lists)).
 :- use_module(library(settings)).
 :- use_module(library(option)).
 :- use_module(library(error)).
+:- use_module(library(when)).
 
 /** <module> A Replicated Data Store
 
@@ -125,6 +125,9 @@ tipc_initialize/0.|_
     tipc_paxos_on_change(?, 0),
     tipc_basic_paxos_on_change(+, +, 0).
 
+:- multifile
+    paxos_message_hook/3.                       % +PaxOS, +TimeOut, -Message
+
 :- setting(max_sets, nonneg, 20,
            "Max Retries to get to an agreement").
 :- setting(max_gets, nonneg, 5,
@@ -154,7 +157,7 @@ tipc_paxos_initialize :-
     listening(tipc_paxos, _, _),
     !.
 tipc_paxos_initialize :-
-    listen(tipc_paxos, X, tipc_paxos_message(X)),
+    listen(tipc_paxos, paxos(X), tipc_paxos_message(X)),
     tipc_basic_paxos_on_change(tipc_paxos, Term, tipc_paxos_audit(Term)).
 %
 % The Paxos state machine is memoryless. The state is managed by a
@@ -166,20 +169,27 @@ tipc_paxos_audit(Term) :-
     ;   tipc_paxos_set(Term)
     ).
 
-tipc_paxos_message(paxos_prepare(K-Term)) :-
-    recorded(Term, paxons_ledger(K, _Term)),
-    !.
-tipc_paxos_message(paxos_prepare(0-Term)) :-
-    recorda(Term, paxons_ledger(0, Term)).
-tipc_paxos_message(paxos_accept(K-Term, K)) :-
-    recorded(Term, paxons_ledger(K1, _Term), Ref),
-    K > K1,
-    recorda(Term, paxons_ledger(K, Term)),
-    erase(Ref),
-    !.
-tipc_paxos_message(paxos_accept(_, nack)).
-tipc_paxos_message(paxos_retrieve(K-Term)) :-
+tipc_paxos_message(prepare(K-Term)) :-
+    (   recorded(Term, paxons_ledger(K, _Term))
+    ->  true
+    ;   K = 0,
+        recorda(Term, paxons_ledger(K, Term))
+    ),
+    debug(paxos, 'Prepared ~p@~d', [Term, K]).
+tipc_paxos_message(accept(K-Term, KA)) :-
+    (   recorded(Term, paxons_ledger(K1, _Term), Ref),
+        K > K1
+    ->  recorda(Term, paxons_ledger(K, Term)),
+        erase(Ref),
+        KA = K,
+        debug(paxos, 'Accepted ~p@~d', [Term, K])
+    ;   KA = nack,
+        debug(paxos, 'Rejected ~p@~d', [Term, K])
+    ).
+tipc_paxos_message(retrieve(K-Term)) :-
+    debug(paxos, 'Retrieving ~p', [Term]),
     recorded(Term, paxons_ledger(K, Term)),
+    debug(paxos, 'Retrieved ~p@~d', [Term,K]),
     !.
 
 %%  tipc_paxos_set(?Term) is semidet.
@@ -220,17 +230,22 @@ tipc_paxos_set(Term, Retries) :-
     tipc_paxos_set(Term, [retry(Retries)]).
 tipc_paxos_set(Term, Options) :-
     must_be(compound, Term),
+    tipc_paxos_initialize,
     option(retry(Retries), Options, Retries),
     option(timeout(TMO), Options, TMO),
     apply_default(Retries, max_sets),
     apply_default(TMO, response_timeout),
+    paxos_message(prepare(R-Term), TMO, Prepare),
     between(0, Retries, _),
-    findall(R, broadcast_request(tipc_cluster(paxos_prepare(R-Term), TMO)), Rs),
+    findall(R, broadcast_request(Prepare), Rs),
+    debug(paxos, 'Prepare: ~p', [Rs]),
     max_list(Rs, K),
     succ(K, K1),
-    findall(R, broadcast_request(tipc_cluster(paxos_accept(K1-Term, R), TMO)), R1s),
+    paxos_message(accept(K1-Term, R), TMO, Accept),
+    findall(R, broadcast_request(Accept), R1s),
     c_element(R1s, K, K1),
-    broadcast(tipc_cluster(paxos_changed(Term))),
+    paxos_message(changed(Term), -, Changed),
+    broadcast(Changed),
     !.
 
 apply_default(Var, Setting) :-
@@ -240,6 +255,7 @@ apply_default(Var, Setting) :-
 apply_default(_, _).
 
 %!  tipc_paxos_get(?Term) is semidet.
+%!  tipc_paxos_get(?Term, +Options) is semidet.
 %
 %   unifies Term with the entry retrieved from the Paxon's ledger. If no
 %   such entry exists in the member's local   cache,  then the quorum is
@@ -248,16 +264,34 @@ apply_default(_, _).
 %   with the same functor and arity exists   in  the Paxon's ledger, and
 %   fails otherwise.
 %
+%   Options processed:
+%
+%     - retry(Retries)
+%     is a non-negative integer specifying the number of retries that
+%     will be performed before a set is abandoned.  Defaults to the
+%     _setting_ `max_gets` (5).
+%     - timeout(+Seconds)
+%     Max time to wait for the forum to reply.  Defaults to the
+%     _setting_ `response_timeout` (0.020, 20ms).
+%
 %   @arg Term is a compound. Any unbound variables are unified with
 %   those provided in the ledger entry.
 
 tipc_paxos_get(Term) :-
+    tipc_paxos_get(Term, []).
+
+tipc_paxos_get(Term, _) :-
     recorded(Term, paxons_ledger(_K, Term)),
     !.
-tipc_paxos_get(Term) :-
-    setting(max_gets, N),
-    between(1, N, _),
-    findall(K-Term, broadcast_request(tipc_cluster(paxos_retrieve(K-Term), 0.020)), Terms),
+tipc_paxos_get(Term, Options) :-
+    tipc_paxos_initialize,
+    option(retry(Retries), Options, Retries),
+    option(timeout(TMO), Options, TMO),
+    apply_default(Retries, max_gets),
+    apply_default(TMO, response_timeout),
+    paxos_message(retrieve(K-Term), TMO, Retrieve),
+    between(0, Retries, _),
+    findall(K-Term, broadcast_request(Retrieve), Terms),
     c_element(Terms, no, K-Term),
     tipc_paxos_set(Term),
     !.
@@ -292,25 +326,27 @@ tipc_paxos_on_change(Term, Goal) :-
     must_be(compound, Term),
     Goal = _:Plain,
     (   Plain == ignore
-    ->  unlisten(tipc_paxos_user, paxos_changed(Term))
+    ->  unlisten(tipc_paxos_user, paxos(changed(Term)))
     ;   tipc_basic_paxos_on_change(tipc_paxos_user, Term, Goal)
     ).
 
-% Private
 tipc_basic_paxos_on_change(Owner, Term, Goal) :-
-    callable(Goal),
-    listen(Owner, paxos_changed(Term),
+    must_be(callable, Goal),
+    tipc_paxos_initialize,
+    listen(Owner, paxos(changed(Term)),
            thread_create(Goal, _, [detached(true)])).
 
-%!  tipc_initialize is semidet.
-%   See tipc:tipc_initialize/0.
+%!  paxos_message(+PaxOS, +TimeOut, -BroadcastMessage) is det.
 %
-
-:- multifile tipc:tipc_stack_initialize/0.
-
-%   tipc_stack_initialize is det. called as a side-effect of
-%   tipc:tipc_initialize/0.
+%   Transform a basic PaxOS message in   a  message for the broadcasting
+%   service. This predicate is hooked   by paxos_message_hook/3 with the
+%   same signature.
 %
-tipc:tipc_stack_initialize :-
-    tipc_paxos_initialize,
+%   @arg TimeOut is one of `-` or a time in seconds.
+
+paxos_message(Paxos, TMO, Message) :-
+    paxos_message_hook(paxos(Paxos), TMO, Message),
     !.
+paxos_message(Paxos, -, tipc_cluster(paxos(Paxos))) :-
+    !.
+paxos_message(Paxos, TMO, tipc_cluster(paxos(Paxos), TMO)).
