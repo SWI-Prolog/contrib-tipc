@@ -34,10 +34,7 @@
 
 #define O_DEBUG 1
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
-
 #include "nonblockio.h"
 
 #include <SWI-Stream.h>

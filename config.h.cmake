@@ -1,0 +1,13 @@
+#cmakedefine HAVE_H_ERRNO
+#cmakedefine HAVE_POLL_H
+#cmakedefine HAVE_POLL
+#cmakedefine HAVE_SYS_TIME_H
+#cmakedefine HAVE_UNISTD_H
+#cmakedefine HAVE_FCNTL_H
+#cmakedefine HAVE_NETINET_TCP_H
+#cmakedefine HAVE_LIBSOCKET
+#cmakedefine HAVE_LINUX_TIPC_H
+#cmakedefine HAVE_SOCKLEN_T
+#cmakedefine O_PLMT
+#cmakedefine PL_ARITY_AS_SIZE
+#cmakedefine _REENTRANT
