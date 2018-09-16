@@ -23,4 +23,13 @@ target_include_directories(
     plugin_tipc BEFORE PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../clib)
 
+pkg_doc(tipc
+	LIBSUBDIR
+	    tipc
+	SECTION
+	    tipc_overview.md
+	SUBSECTION
+	    tipc_broadcast.pl tipc_paxos.pl tipc_linda.pl
+	    SOURCE tipc.pl tipcpl.tex)
+
 endif(HAVE_LINUX_TIPC_H)

@@ -92,7 +92,7 @@ TEXEXTRA=	tipcoverview.tex tipcpl.tex tipcbroadcast.tex \
 		tipcpaxos.tex tipclinda.tex
 $(TEX):		$(TEXEXTRA)
 
-tipcoverview.tex:	tipc_overview.txt
+tipcoverview.tex:	tipc_overview.md
 		$(PLTOTEX) --section $<
 tipcpl.tex:	tipc.pl
 		$(PLTOTEX) --subsection --out=tipcpl $<
