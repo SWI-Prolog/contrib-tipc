@@ -43,7 +43,7 @@ AC_CHECK_TYPES(socklen_t, [], [],
 
 if test "$tpic" = "yes"; then
   TARGETS="$TARGETS tipc.$SO"
-  LIBTXT="$LIBTXT tipc_overview.txt"
+  LIBTXT="$LIBTXT tipc_overview.md"
 fi
 
 PLTARGETS=`echo $TARGETS | sed -e "s/\.$SO/.pl/g" -e "s/files.pl/filesex.pl/"`

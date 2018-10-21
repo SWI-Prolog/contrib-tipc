@@ -77,7 +77,7 @@ operating at arm's  length  on  different   line  cards  or  mainframes.
 Delegation of responsibility in  this  way   is  one  of the fundamental
 precepts of the Erlang programming system,   also developed at Ericsson.
 TIPC represents a more generalized version of the same behavioral design
-pattern. For an overview, please see: tipc_overview.txt.
+pattern. For an overview, please see: tipc_overview.md.
 
 @author Jeffrey Rosenwald (JeffRose@acm.org)
 @see    <http://tipc.sf.net>, <http://www.erlang.org>
