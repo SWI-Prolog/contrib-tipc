@@ -79,6 +79,15 @@ precepts of the Erlang programming system,   also developed at Ericsson.
 TIPC represents a more generalized version of the same behavioral design
 pattern. For an overview, please see: tipc_overview.md.
 
+__Errors__
+
+The TIPC module uses the error   handling functions from library(socket)
+and therefore all the functions below may throw error(socket_error(Code,
+Message)) where `Code` is the  lowercase   version  of the C-macro error
+code and `Message` is an atom describing   the error in a human friendly
+format, depending on the current  locale.   See  the  socket library for
+details.
+
 @author Jeffrey Rosenwald (JeffRose@acm.org)
 @see    <http://tipc.sf.net>, <http://www.erlang.org>
 @compat Linux only
@@ -96,11 +105,6 @@ pattern. For an overview, please see: tipc_overview.md.
 %    * seqpacket - numbered, reliable datagram service, and
 %    * stream - reliable, connection-oriented byte-stream
 %      service
-%
-%    @error socket_error('Address family not supported by
-%    protocol') is thrown if a TIPC server is not available on
-%    the current host.
-%
 
 %!   tipc_close_socket(+SocketId) is det.
 %
@@ -122,10 +126,6 @@ pattern. For an overview, please see: tipc_overview.md.
 %
 %    @param SocketId the socket identifier returned by tipc_socket/2
 %    or tipc_accept/3.
-%
-%    @error socket_error('Invalid argument) is thrown  if an attempt
-%    is made to close a  socket   identifier  that  has already been
-%    closed.
 
 %!  tipc_subscribe(+SocketId, +NameSeqAddress, +Timeout, +Filter, +UserHandle) is det.
 %
@@ -177,11 +177,6 @@ pattern. For an overview, please see: tipc_overview.md.
 %
 %    @param UserHandle an eight-byte code that is passed
 %    transparently to the user with each event notification.
-%
-%    @error  socket_error('Invalid argument') is thrown under several
-%    circumstances, the most obscure being that only name_seq/3
-%    addresses are permissible. To interrogate a specific server
-%    instance X, of type Y, use: name_seq(Y, X, X).
 
 %!   tipc_open_socket(+SocketId, -InStream, -OutStream) is det.
 %
@@ -257,14 +252,6 @@ pattern. For an overview, please see: tipc_overview.md.
 %    socket to a given TIPC_address.   After  successful completion,
 %    tipc_open_socket/3 may be used  to   create  I/O-Streams to the
 %    remote socket.
-%
-%    @throws socket_error('Connection refused'), if there are
-%    no servers bound to the specified address.
-%
-%    @throws socket_error('Connection timed out'), if no server that
-%    is bound to the specified address accepts the connect
-%    request within the specified time limit. See also
-%    tipc_setopt/2.
 
 %!   tipc_get_name(+Socket, -TIPC_address) is det.
 %
@@ -274,10 +261,6 @@ pattern. For an overview, please see: tipc_overview.md.
 %
 %    Unifies TIPC_address with the port-id assigned to the socket
 %    that this socket is connected to.
-%
-%    @throws socket_error('Transport endpoint is not connected'), if
-%    an attempt is made to obtain a peer's name of an unconnected
-%    socket.
 
 %!   tipc_setopt(+Socket,+Option) is det.
 %
@@ -315,11 +298,10 @@ pattern. For an overview, please see: tipc_overview.md.
 %      * nonblock
 %      Poll the socket and return immediately. If a message is
 %      present, it is returned. If not, then an exception,
-%      error(socket_error('Resource temporarily unavailable'), _),
-%      will be thrown. Users are cautioned not to "spin"
-%      unnecessarily on non-blocking receives as they may prevent
-%      the system from servicing other background activities such as
-%      XPCE event dispatching.
+%      error(socket_error(eagain, Message), _), will be thrown. Users
+%      are cautioned not to "spin" unnecessarily on non-blocking
+%      receives as they may prevent the system from servicing other
+%      background activities such as XPCE event dispatching.
 %
 %    The typical sequence to receive a connectionless TIPC datagram is:
 %
@@ -404,7 +386,7 @@ pattern. For an overview, please see: tipc_overview.md.
 :- multifile
     prolog:message/3.
 
-prolog:message(error(socket_error(Message), _)) -->
+prolog:message(error(socket_error(_Code, Message), _)) -->
     [ 'Socket error: ~w'-[Message] ].
 
 %!  tipc_canonical_address(-CanonicalAddress, +PortId) is det.
@@ -615,10 +597,6 @@ tipc_service_port_monitor(Addresses, Goal, Timeout) :-
 %      and made ready for service. An application must call this
 %      predicate as part of its initialization prior to any use of
 %      TIPC predicates. _|Please note the change of the API.|_
-%
-%      @throws socket_error('Address family not supported by protocol')
-%      if a TIPC server is not available on the current host.
-%
 
 tipc_initialize :-
     with_mutex(tipc_mutex,
