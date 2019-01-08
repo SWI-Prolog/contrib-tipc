@@ -95,6 +95,7 @@ static functor_t FUNCTOR_mcast3;
 
 #define V1_TIPC_SUB_SERVICE 0x02
 
+static int get_socket_from_stream(term_t t, IOSTREAM **stp, nbio_sock_t *sp);
 
 		 /*******************************
 		 *	      SYMBOL		*
@@ -173,6 +174,9 @@ tipc_get_socket(term_t handle, nbio_sock_t *sp)
 
     return TRUE;
   }
+
+  if ( get_socket_from_stream(handle, NULL, sp) )
+    return TRUE;			/* TBD: check this is a TIPC socket */
 
   return PL_type_error("tipc_socket", handle);
 }
