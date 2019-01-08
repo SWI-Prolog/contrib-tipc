@@ -97,40 +97,85 @@ static functor_t FUNCTOR_mcast3;
 
 
 		 /*******************************
-		 *	     CONVERSION		*
+		 *	      SYMBOL		*
 		 *******************************/
 
+static void
+acquire_tipc_symbol(atom_t symbol)
+{ nbio_sock_t s = *(nbio_sock_t*)PL_blob_data(symbol, NULL, NULL);
+
+  nbio_set_symbol(s, symbol);
+}
+
 static int
-tipc_get_socket(term_t Socket, nbio_sock_t *id)
-{ IOSTREAM *s;
+release_tipc_symbol(atom_t symbol)
+{ nbio_sock_t s = *(nbio_sock_t*)PL_blob_data(symbol, NULL, NULL);
 
-  if ( PL_is_functor(Socket, FUNCTOR_tipc_socket1) )
-  { term_t a = PL_new_term_ref();
-    void *ptr;
+  freeSocket(s);
+  return TRUE;
+}
 
-    _PL_get_arg(1, Socket, a);
-    if ( PL_get_pointer(a, &ptr) )
-    { *id = ptr;
-      return TRUE;
-    }
-  }
+static int
+compare_tipc_symbols(atom_t a, atom_t b)
+{ nbio_sock_t sa = *(nbio_sock_t*)PL_blob_data(a, NULL, NULL);
+  nbio_sock_t sb = *(nbio_sock_t*)PL_blob_data(b, NULL, NULL);
 
-  if ( PL_get_stream_handle(Socket, &s) )
-  { *id = s->handle;
+  return ( sa > sb ?  1 :
+	   sa < sb ? -1 : 0
+	 );
+}
+
+
+static int
+write_tipc_symbol(IOSTREAM *s, atom_t symbol, int flags)
+{ nbio_sock_t sock = *(nbio_sock_t*)PL_blob_data(symbol, NULL, NULL);
+
+  Sfprintf(s, "<tipc_socket>(%p)", sock);
+  return TRUE;
+}
+
+
+static PL_blob_t tipc_blob =
+{ PL_BLOB_MAGIC,
+  0,
+  "tipc_socket",
+  release_tipc_symbol,
+  compare_tipc_symbols,
+  write_tipc_symbol,
+  acquire_tipc_symbol
+};
+
+
+static int
+tipc_unify_socket(term_t handle, nbio_sock_t socket)
+{ if ( PL_unify_blob(handle, &socket, sizeof(socket), &tipc_blob) )
+    return TRUE;
+
+  if ( !PL_is_variable(handle) )
+    return PL_uninstantiation_error(handle);
+
+  return FALSE;					/* (resource) error */
+}
+
+
+static int
+tipc_get_socket(term_t handle, nbio_sock_t *sp)
+{ PL_blob_t *type;
+  void *data;
+
+  if ( PL_get_blob(handle, &data, NULL, &type) && type == &tipc_blob)
+  { nbio_sock_t s = *(nbio_sock_t*)data;
+
+    if ( !is_nbio_socket(s) )
+      return PL_existence_error("tipc_socket", handle);
+
+    *sp = s;
+
     return TRUE;
   }
 
-  return pl_error(NULL, 0, NULL, ERR_ARGTYPE, -1, Socket, "socket");
+  return PL_type_error("tipc_socket", handle);
 }
-
-
-static int
-tipc_unify_socket(term_t Socket, nbio_sock_t socket)
-{ return PL_unify_term(Socket,
-		       PL_FUNCTOR, FUNCTOR_tipc_socket1,
-		         PL_POINTER, socket);
-}
-
 
 #define pl_open_socket tipc_open_socket
 #define pl_listen tipc_listen
@@ -138,7 +183,7 @@ tipc_unify_socket(term_t Socket, nbio_sock_t socket)
 #define tcp_get_socket(t, p) tipc_get_socket(t, p)
 #include "sockcommon.c"
 
-int
+static int
 get_uint(term_t term, unsigned *value)
 { int64_t v0;
 
@@ -641,7 +686,7 @@ pl_tipc_accept(term_t Master, term_t Slave, term_t Peer)
   if ( !tipc_get_socket(Master, &master) )
     return FALSE;
 
-  if ( (slave = nbio_accept(master, (struct sockaddr*)&addr, &addrlen)) < 0 )
+  if ( !(slave = nbio_accept(master, (struct sockaddr*)&addr, &addrlen)) )
     return FALSE;
 					/* TBD: close on failure */
   if ( unify_tipc_address(Peer, &addr) &&
