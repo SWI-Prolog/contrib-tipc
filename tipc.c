@@ -101,22 +101,22 @@ static functor_t FUNCTOR_mcast3;
 		 *******************************/
 
 static int
-tipc_get_socket(term_t Socket, int *id)
+tipc_get_socket(term_t Socket, nbio_sock_t *id)
 { IOSTREAM *s;
-  int socket;
 
   if ( PL_is_functor(Socket, FUNCTOR_tipc_socket1) )
   { term_t a = PL_new_term_ref();
+    void *ptr;
 
     _PL_get_arg(1, Socket, a);
-    if ( PL_get_integer(a, id) )
+    if ( PL_get_pointer(a, &ptr) )
+    { *id = ptr;
       return TRUE;
+    }
   }
 
   if ( PL_get_stream_handle(Socket, &s) )
-  { socket = (int)(intptr_t)s->handle;
-
-    *id = socket;
+  { *id = s->handle;
     return TRUE;
   }
 
@@ -125,10 +125,10 @@ tipc_get_socket(term_t Socket, int *id)
 
 
 static int
-tipc_unify_socket(term_t Socket, int id)
+tipc_unify_socket(term_t Socket, nbio_sock_t socket)
 { return PL_unify_term(Socket,
 		       PL_FUNCTOR, FUNCTOR_tipc_socket1,
-		         IntArg(id));
+		         PL_POINTER, socket);
 }
 
 
@@ -323,7 +323,7 @@ tipc_setopt(nbio_sock_t socket, tipc_option opt, ...)
 
 static foreign_t
 pl_tipc_setopt(term_t Socket, term_t opt)
-{ int socket;
+{ nbio_sock_t socket;
   atom_t a;
   size_t arity;
 
@@ -449,7 +449,7 @@ unify_tipc_address(term_t t, struct sockaddr_tipc *addr)
 static foreign_t
 pl_tipc_basic_get_name(term_t Socket, term_t t, int peer)
 { struct sockaddr_tipc addr;
-  int socket;
+  nbio_sock_t socket;
   SOCKET fd;
 #ifdef __WINDOWS__
   int alen = sizeof(addr);
@@ -493,7 +493,7 @@ pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
 #else
   socklen_t alen = sizeof(sockaddr);
 #endif
-  int socket;
+  nbio_sock_t socket;
   int flags = 0;
   char buf[TIPC_MAXDATA];
   ssize_t n;
@@ -563,7 +563,7 @@ pl_tipc_send(term_t Socket, term_t Data, term_t To, term_t Options)
 #else
   int alen = sizeof(sockaddr);
 #endif
-  int socket;
+  nbio_sock_t socket;
   int flags = 0L;
   char *data;
   size_t dlen;
@@ -593,10 +593,9 @@ pl_tipc_send(term_t Socket, term_t Data, term_t To, term_t Options)
 
 static foreign_t
 create_tipc_socket(term_t socket, int type)
-{ int sock;
+{ nbio_sock_t sock;
 
-  sock = nbio_socket(AF_TIPC, type, 0);
-  if ( sock < 0 )
+  if ( !(sock = nbio_socket(AF_TIPC, type, 0)) )
     return FALSE;
 
   return tipc_unify_socket(socket, sock);
@@ -633,7 +632,7 @@ tipc_socket(term_t socket, term_t opt)
 
 static foreign_t
 pl_tipc_accept(term_t Master, term_t Slave, term_t Peer)
-{ int master, slave;
+{ nbio_sock_t master, slave;
   struct sockaddr_tipc addr;
   socklen_t addrlen = sizeof(addr);
 
@@ -655,7 +654,7 @@ pl_tipc_accept(term_t Master, term_t Slave, term_t Peer)
 
 static foreign_t
 pl_tipc_connect(term_t Socket, term_t Address)
-{ int sock;
+{ nbio_sock_t sock;
   struct sockaddr_tipc sockaddr;
 
   memset(&sockaddr, 0, sizeof(sockaddr));
@@ -675,7 +674,7 @@ static foreign_t
 pl_tipc_bind(term_t Socket, term_t Address, term_t opt)
 { struct sockaddr_tipc sockaddr;
   size_t addrlen = sizeof(sockaddr);
-  int socket;
+  nbio_sock_t socket;
   atom_t a;
   size_t arity;
 
@@ -727,7 +726,7 @@ pl_tipc_subscribe(term_t Socket, term_t Address,
 		  term_t timeout, term_t filter, term_t usr_handle)
 { struct sockaddr_tipc sockaddr;
   struct tipc_subscr subscr;
-  int socket;
+  nbio_sock_t socket;
   unsigned time, filt;
   char *handle;
   size_t handle_len;
@@ -790,7 +789,7 @@ pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
 #else
   socklen_t alen = sizeof(sockaddr);
 #endif
-  int socket;
+  nbio_sock_t socket;
   int flags = 0;
   union {
      char asCodes[sizeof(struct tipc_event)];
