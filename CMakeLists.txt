@@ -16,7 +16,6 @@ configure_file(config.h.cmake config.h)
 swipl_plugin(
     tipc
     C_SOURCES ../clib/error.c tipc.c ../clib/nonblockio.c
-    C_LIBS ${LIBEDIT_LIBRARIES}
     PL_LIB_SUBDIR tipc
     PL_LIBS tipc.pl tipc_broadcast.pl tipc_paxos.pl tipc_linda.pl)
 target_include_directories(
