@@ -3,7 +3,7 @@
     Author:        Jeffrey Rosenwald
     E-mail:        jeffrose@acm.org
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2009-2013, Jeffrey Rosenwald
+    Copyright (c)  2009-2020, Jeffrey Rosenwald
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -58,9 +58,9 @@
             tipc_service_exists/2,       % +Address +Timeout
             tipc_initialize/0            %
           ]).
-:- use_module(library(apply)).
-:- use_module(library(lists)).
-:- use_module(library(shlib)).
+:- autoload(library(apply),[maplist/3]).
+:- autoload(library(lists),[member/2]).
+
 :- use_foreign_library(foreign(tipc)).
 
 :- multifile tipc_stack_initialize/0.

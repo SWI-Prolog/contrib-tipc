@@ -36,6 +36,7 @@
           [ tipc_host_to_address/2,             % ?Host, ?Address
             tipc_initialize/0
           ]).
+:- use_module(library(tipc/tipc),[tipc_initialize/0]).
 
 /** <module> A TIPC Broadcast Bridge
 
@@ -234,10 +235,20 @@ and subtle differences that must be taken into consideration:
 @compat    Linux only
 */
 
-:- use_module(tipc).
-:- use_module(library(broadcast)).
-:- use_module(library(time)).
-:- use_module(library(unix)).
+:- autoload(tipc,
+	    [ tipc_get_name/2,
+	      tipc_send/4,
+	      tipc_socket/2,
+	      tipc_close_socket/1,
+	      tipc_setopt/2,
+	      tipc_bind/3,
+	      tipc_receive/4
+	    ]).
+:- autoload(library(broadcast),
+	    [broadcast_request/1,broadcast/1,listen/3,unlisten/1]).
+:- autoload(library(debug),[assertion/1]).
+:- autoload(library(time),
+	    [call_with_time_limit/2,alarm/3,remove_alarm/1]).
 
 :- require([ thread_self/1
            , forall/2

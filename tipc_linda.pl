@@ -58,22 +58,12 @@
            tipc_linda_server/0,      %
            tipc_initialize/0
           ]).
-
-:- use_module(library(tipc/tipc_broadcast)).
-:- use_module(library(unix)).
-
-:- require([ broadcast/1
-           , broadcast_request/1
-           , throw/1
-           , member/2
-           , must_be/2
-           , catch/3
-           , flag/3
-           , listen/3
-           , setup_call_cleanup/3
-           , strip_module/3
-           ]).
-
+:- use_module(library(tipc/tipc),[tipc_initialize/0]).
+:- autoload(library(broadcast),
+	    [listen/3,broadcast_request/1,broadcast/1,unlisten/3]).
+:- autoload(library(debug),[assertion/1]).
+:- autoload(library(error),[must_be/2]).
+:- autoload(library(lists),[member/2]).
 
 /** <module> A Process Communication Interface
 

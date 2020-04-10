@@ -40,8 +40,8 @@
             tipc_paxos_on_change/2,   % ?Term, +Goal
             tipc_initialize/0
           ]).
-:- use_module(library(tipc/tipc_broadcast)).
-:- use_module(library(paxos)).
+:- use_module(library(tipc/tipc_broadcast), [tipc_initialize/0]).
+:- autoload(library(paxos),[paxos_set/2,paxos_get/2,paxos_on_change/2]).
 
 /** <module> Paxos on TIPC
 
