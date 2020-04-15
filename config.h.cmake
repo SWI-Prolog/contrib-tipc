@@ -9,5 +9,4 @@
 #cmakedefine HAVE_LINUX_TIPC_H @HAVE_LINUX_TIPC_H@
 #cmakedefine HAVE_SOCKLEN_T @HAVE_SOCKLEN_T@
 #cmakedefine O_PLMT @O_PLMT@
-#cmakedefine PL_ARITY_AS_SIZE @PL_ARITY_AS_SIZE@
 #cmakedefine _REENTRANT @_REENTRANT@
