@@ -58,7 +58,7 @@
            tipc_linda_server/0,      %
            tipc_initialize/0
           ]).
-:- use_module(library(tipc/tipc),[tipc_initialize/0]).
+:- use_module(library(tipc/tipc_broadcast),[tipc_initialize/0]).
 :- autoload(library(broadcast),
 	    [listen/3,broadcast_request/1,broadcast/1,unlisten/3]).
 :- autoload(library(debug),[assertion/1]).
