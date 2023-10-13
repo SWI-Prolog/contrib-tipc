@@ -61,7 +61,7 @@
 :- use_module(library(tipc/tipc_broadcast),[tipc_initialize/0]).
 :- autoload(library(broadcast),
 	    [listen/3,broadcast_request/1,broadcast/1,unlisten/3]).
-:- autoload(library(debug),[assertion/1]).
+:- use_module(library(debug),[assertion/1]).
 :- autoload(library(error),[must_be/2]).
 :- autoload(library(lists),[member/2]).
 

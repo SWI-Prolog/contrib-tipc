@@ -246,7 +246,7 @@ and subtle differences that must be taken into consideration:
 	    ]).
 :- autoload(library(broadcast),
 	    [broadcast_request/1,broadcast/1,listen/3,unlisten/1]).
-:- autoload(library(debug),[assertion/1]).
+:- use_module(library(debug),[assertion/1]).
 :- autoload(library(time),
 	    [call_with_time_limit/2,alarm/3,remove_alarm/1]).
 
