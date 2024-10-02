@@ -281,9 +281,13 @@ tipc_broadcast_service(zone,            name_seq(20005, 2, 2)).
 %
 
 safely(Predicate) :-
-    catch(Predicate, Err,
-          (Err == '$aborted' -> (!, fail);
-          print_message(error, Err), fail)).
+    catch(Predicate, Err, caught_safely(Err)).
+
+caught_safely('$aborted').
+caught_safely(unwind(abort)).
+caught_safely(Error) :-
+    print_message(error, Error),
+    fail.
 
 %!  ~>(:P, :Q) is semidet.
 %!  eventually_implies(:P, :Q) is semidet.
