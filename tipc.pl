@@ -310,7 +310,7 @@ details.
 %            tipc_socket(S, dgram),
 %            tipc_bind(S, name(18888, 10, 0), scope(zone)),
 %            repeat,
-%                tipc_receive(Socket, Data, From, [as(atom)]),
+%                tipc_receive(S, Data, From, [as(atom)]),
 %                format('Got ~q from ~q~n', [Data, From]),
 %                Data == quit,
 %            !, tipc_close_socket(S).
