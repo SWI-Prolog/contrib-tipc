@@ -3,7 +3,8 @@
     Author:        Jeffrey Rosenwald
     E-mail:        jeffrose@acm.org
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2009-2015, Jeffrey Rosenwald
+    Copyright (c)  2009-2025, Jeffrey Rosenwald
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -159,7 +160,7 @@ tipc_unify_socket(term_t handle, nbio_sock_t socket)
 }
 
 
-static int
+static bool
 tipc_get_socket(term_t handle, nbio_sock_t *sp)
 { PL_blob_t *type;
   void *data;
@@ -168,17 +169,17 @@ tipc_get_socket(term_t handle, nbio_sock_t *sp)
   { nbio_sock_t s = *(nbio_sock_t*)data;
 
     if ( !is_nbio_socket(s) )
-      return PL_existence_error("tipc_socket", handle);
+      return PL_existence_error("tipc_socket", handle), false;
 
     *sp = s;
 
-    return TRUE;
+    return true;
   }
 
   if ( get_socket_from_stream(handle, NULL, sp) )
-    return TRUE;			/* TBD: check this is a TIPC socket */
+    return true;			/* TBD: check this is a TIPC socket */
 
-  return PL_type_error("tipc_socket", handle);
+  return PL_type_error("tipc_socket", handle),false;
 }
 
 #define pl_open_socket tipc_open_socket
