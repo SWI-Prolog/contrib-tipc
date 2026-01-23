@@ -280,7 +280,7 @@ details.
 %
 %    $ conn_timeout(+Seconds) :
 %    Specifies the time interval that tipc_connect/2 will use before
-%    abandoning a connection attempt. Default: 8.000 sec, Minimum 1,
+%    abandoning a connection attempt. Default: 8.000 sec, Minimum 0,
 %    Maximum 300 sec.
 
 %!   tipc_receive(+Socket, -Data, -From, +OptionList) is det.
