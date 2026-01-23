@@ -426,10 +426,10 @@ pl_tipc_setopt(term_t Socket, term_t opt)
       term_t a1 = PL_new_term_ref();
 
       if (PL_get_arg(1, opt, a1))
-      { if(!PL_get_float(a1, &val) || val < 0)
+      { if(!PL_get_float(a1, &val) || val < 0 || val > 300)
 	  return pl_error(NULL, 0, NULL, ERR_DOMAIN, a1, "float");
 
-        ival = val * 1000;  // time is in milliseconds
+        ival = (int) (ival * 1000);  // time is in milliseconds, safe cast
 
 	return((tipc_setopt(socket, NB_TIPC_CONN_TIMEOUT, ival) == 0) ? TRUE : FALSE);
       }
@@ -760,7 +760,7 @@ pl_tipc_bind(term_t Socket, term_t Address, term_t opt)
 	sockaddr.scope = (a == ATOM_scope) ? ival
                                            : -ival;
 
-	if ( nbio_bind(socket, (struct sockaddr*)&sockaddr, addrlen) < 0 )
+	if ( nbio_bind(socket, (struct sockaddr*)&sockaddr, (socklen_t) addrlen) < 0 ) /* safe cast */
 	  return FALSE;
       }
     } else
