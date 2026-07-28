@@ -912,7 +912,8 @@ pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
 
 install_t
 install_tipc()
-{ FILE *fp = fopen("/sys/module/tipc/version", "r");
+{ PL_register_blob_type(&tipc_blob);
+  FILE *fp = fopen("/sys/module/tipc/version", "r");
 
   if(fp)
     { char buf[32];
