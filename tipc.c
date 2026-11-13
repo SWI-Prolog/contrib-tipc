@@ -200,7 +200,7 @@ get_uint(term_t term, unsigned *value)
   return true;
 }
 
-static int
+static bool
 nbio_get_tipc(term_t tipc, struct sockaddr_tipc *sockaddr)
 { term_t a = PL_new_term_ref();
   sockaddr->family = AF_TIPC;
